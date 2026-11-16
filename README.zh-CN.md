@@ -4,7 +4,7 @@
 
 路由器为每台配置的主机在独立的网络命名空间里运行一个 `tailscaled`。发往该节点
 Tailscale 地址的所有流量（任意端口和协议）都会转发给这台主机。每台主机在 tailnet
-里都是一台独立的设备：有自己的名称、地址、标签和 ACL，客户端也不需要子网路由。
+里都是一个独立的节点，有自己的名称和地址，可以单独设标签和 ACL，客户端也不需要子网路由。
 
 [English](README.md)
 
@@ -14,7 +14,7 @@ Tailscale 地址的所有流量（任意端口和协议）都会转发给这台�
   和身份。
 - **按 IPv4 或 MAC 地址指定目标**：MAC 目标会跟随主机的 DHCP 租约，主机地址变了
   节点照常工作。
-- **LuCI 页面**（`luci-app-tailscale-vnode`）：添加、编辑、加入和删除节点；实时显示
+- **LuCI 页面**（`luci-app-tailscale-vnode`）：添加、编辑、加入和删除节点。实时显示
   谁连着哪个节点，是直连还是经哪个 DERP 中继。
 - **Cloudflare DNS**（可选）：为每个节点维护一条指向其 Tailscale 地址的 `A` 记录。
   只会修改本软件包创建的记录。
@@ -49,7 +49,7 @@ apk add --allow-untrusted tailscale-vnode-*.apk luci-app-tailscale-vnode-*.apk
 ### LuCI
 
 打开 **服务 → Tailscale 虚拟节点**，点 **添加节点**，选择局域网主机并填写 Tailscale
-名称。填了认证密钥的话节点会立即加入 tailnet；没填可以稍后在节点列表里加入。
+名称。填了认证密钥的话节点会立即加入 tailnet。没填可以稍后在节点列表里加入。
 
 带标签的认证密钥需要在 tailnet 策略里为该标签配置 `tagOwners`。
 

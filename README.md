@@ -6,8 +6,8 @@ installing Tailscale on them.
 For every configured host the router runs a separate `tailscaled` in its own
 network namespace. Everything sent to that node's Tailscale address, on any
 port or protocol, is forwarded to the host. Each host shows up in the tailnet
-as a device of its own: its own name, address, tags and ACLs, and no subnet
-routes on the clients.
+as a node of its own, with its own name and address and separate tags and
+ACLs, and the clients need no subnet routes.
 
 [中文说明](README.zh-CN.md)
 
@@ -17,8 +17,8 @@ routes on the clients.
   namespace with its own `tailscaled` and identity.
 - **Target by IPv4 or MAC address.** A MAC target follows the host's DHCP
   lease, so the node keeps working when the host's address changes.
-- **LuCI page** (`luci-app-tailscale-vnode`): add, edit, join and delete nodes;
-  a live view of who is connected to which node, directly or through which
+- **LuCI page** (`luci-app-tailscale-vnode`): add, edit, join and delete nodes.
+  A live view shows who is connected to which node, directly or through which
   DERP relay.
 - **Cloudflare DNS** (optional): an `A` record per node pointing at its
   Tailscale address, kept up to date. Only records the package created are
