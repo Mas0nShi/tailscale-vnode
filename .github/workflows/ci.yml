@@ -168,3 +168,30 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes \
             feed/25.12/*.apk feed/key.pem
+
+  # The package feed on GitHub Pages (Settings > Pages > Source: GitHub
+  # Actions), refreshed by each released version only: builds from main
+  # carry the same version numbers and must not reach routers. Pages needs
+  # a public repository on a free plan.
+  pages:
+    if: startsWith(github.ref, 'refs/tags/v') && !github.event.repository.private
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: feed
+          path: site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
