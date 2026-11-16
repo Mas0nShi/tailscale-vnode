@@ -1,0 +1,353 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+msgid "%s is not in a zone the token can manage."
+msgstr ""
+
+msgid "API token"
+msgstr ""
+
+msgid "Account API token with Zone DNS Edit and Zone Read."
+msgstr ""
+
+msgid "Add node"
+msgstr ""
+
+msgid "Advanced Settings"
+msgstr ""
+
+msgid "Applied the next time the node joins."
+msgstr ""
+
+msgid "Auth key"
+msgstr ""
+
+msgid "Base UDP port"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Cannot be changed later."
+msgstr ""
+
+msgid "Close"
+msgstr ""
+
+msgid "Cloudflare DNS"
+msgstr ""
+
+msgid "Cloudflare rejected the token."
+msgstr ""
+
+msgid "Connections"
+msgstr ""
+
+msgid "Could not create the node."
+msgstr ""
+
+msgid "Could not delete the node."
+msgstr ""
+
+msgid "Could not join the tailnet."
+msgstr ""
+
+msgid "Could not save."
+msgstr ""
+
+msgid "Create"
+msgstr ""
+
+msgid "Create and join"
+msgstr ""
+
+msgid "Create token"
+msgstr ""
+
+msgid "Created. Join the tailnet from the node list."
+msgstr ""
+
+msgid "Creating node"
+msgstr ""
+
+msgid "DNS: %s"
+msgstr ""
+
+msgid "DNS: name taken by another record"
+msgstr ""
+
+msgid "Default"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid "Delete API token"
+msgstr ""
+
+msgid "Delete node: %s"
+msgstr ""
+
+msgid "Delete records"
+msgstr ""
+
+msgid "Desktop"
+msgstr ""
+
+msgid "Direct"
+msgstr ""
+
+msgid "Disable"
+msgstr ""
+
+msgid "Disable Cloudflare DNS"
+msgstr ""
+
+msgid "Disabled"
+msgstr ""
+
+msgid "Domain"
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Edit node: %s"
+msgstr ""
+
+msgid "Enable"
+msgstr ""
+
+msgid "Enabled"
+msgstr ""
+
+msgid "Enter the API token first"
+msgstr ""
+
+msgid "Enter the API token."
+msgstr ""
+
+msgid "Extra arguments"
+msgstr ""
+
+msgid "General Settings"
+msgstr ""
+
+msgid "Generate key"
+msgstr ""
+
+msgid "Give LAN hosts their own Tailscale device without installing Tailscale on them."
+msgstr ""
+
+msgid "Global Settings"
+msgstr ""
+
+msgid "Host does not respond"
+msgstr ""
+
+msgid "Host has no address"
+msgstr ""
+
+msgid "Icon"
+msgstr ""
+
+msgid "Inbound connections"
+msgstr ""
+
+msgid "Invalid DNS name"
+msgstr ""
+
+msgid "Invalid Tailscale name"
+msgstr ""
+
+msgid "Invalid node ID"
+msgstr ""
+
+msgid "Invalid port"
+msgstr ""
+
+msgid "Invalid tag: %s"
+msgstr ""
+
+msgid "Join"
+msgstr ""
+
+msgid "Join tailnet"
+msgstr ""
+
+msgid "Join tailnet: %s"
+msgstr ""
+
+msgid "Joined as %s"
+msgstr ""
+
+msgid "Joined; the address will appear in the list."
+msgstr ""
+
+msgid "Joining tailnet"
+msgstr ""
+
+msgid "Laptop"
+msgstr ""
+
+msgid "Leave tailnet"
+msgstr ""
+
+msgid "Link network"
+msgstr ""
+
+msgid "Link-local networks are not supported"
+msgstr ""
+
+msgid "Loading zones"
+msgstr ""
+
+msgid "Local network"
+msgstr ""
+
+msgid "Log %s out of the tailnet?"
+msgstr ""
+
+msgid "MAC or IPv4 address"
+msgstr ""
+
+msgid "Must carry the node's tags."
+msgstr ""
+
+msgid "Must not overlap other networks. Changing it restarts all nodes."
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Needs login"
+msgstr ""
+
+msgid "No visitors"
+msgstr ""
+
+msgid "Node ID"
+msgstr ""
+
+msgid "Nodes"
+msgstr ""
+
+msgid "Not set"
+msgstr ""
+
+msgid "Nothing was changed."
+msgstr ""
+
+msgid "Opens each node's UDP port on the router, so that devices on the upstream network can connect directly instead of through a relay."
+msgstr ""
+
+msgid "Optional."
+msgstr ""
+
+msgid "Passed to tailscale up."
+msgstr ""
+
+msgid "Phone"
+msgstr ""
+
+msgid "Relay %s"
+msgstr ""
+
+msgid "Retry"
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Select a host"
+msgstr ""
+
+msgid "Select a host or enter a MAC or IPv4 address."
+msgstr ""
+
+msgid "Select a zone"
+msgstr ""
+
+msgid "Select or enter a domain."
+msgstr ""
+
+msgid "Server"
+msgstr ""
+
+msgid "Set up"
+msgstr ""
+
+msgid "Starting node"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Stopped"
+msgstr ""
+
+msgid "Sync"
+msgstr ""
+
+msgid "Tag %s does not exist in the tailnet ACL. Create a key with an existing tag."
+msgstr ""
+
+msgid "Tags"
+msgstr ""
+
+msgid "Tailscale Virtual Nodes"
+msgstr ""
+
+msgid "Tailscale address"
+msgstr ""
+
+msgid "Tailscale name"
+msgstr ""
+
+msgid "Target"
+msgstr ""
+
+msgid "The DNS record of %s could not be removed: %s"
+msgstr ""
+
+msgid "The key is invalid, expired or already used."
+msgstr ""
+
+msgid "The key may not use this node's tags."
+msgstr ""
+
+msgid "The node did not start. See the system log."
+msgstr ""
+
+msgid "The node leaves the tailnet. This cannot be undone."
+msgstr ""
+
+msgid "The token cannot manage any zone."
+msgstr ""
+
+msgid "This section contains no values yet"
+msgstr ""
+
+msgid "Timed out. Check that the router can reach Tailscale."
+msgstr ""
+
+msgid "UDP port"
+msgstr ""
+
+msgid "Waiting for address"
+msgstr ""
+
+msgid "automatic"
+msgstr ""
+
+msgid "no address"
+msgstr ""
+
+msgid "unchanged"
+msgstr ""
+
+msgid "unreachable"
+msgstr ""

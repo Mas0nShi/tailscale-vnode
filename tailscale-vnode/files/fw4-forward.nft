@@ -1,0 +1,7 @@
+# tailscale-vnode: node namespaces sit behind tsvh* veth links, which belong
+# to no firewall zone. Let their traffic through; replies are already
+# accepted by fw4's established/related rule.
+iifname "tsvh*" accept comment "!tailscale-vnode: node namespaces"
+# Inbound connections to a node's UDP port (globals.inbound), DNATed by the
+# tailscale_vnode table.
+oifname "tsvh*" ct status dnat accept comment "!tailscale-vnode: inbound to nodes"

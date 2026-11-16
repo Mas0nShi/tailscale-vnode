@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        run: |
+          shellcheck \
+            tailscale-vnode/files/vnode.sh \
+            tailscale-vnode/files/dns.sh \
+            tailscale-vnode/files/tailscale-vnode.cli \
+            tailscale-vnode/files/tailscale-vnode.init \
+            tailscale-vnode/files/tailscaled-vnode \
+            tailscale-vnode/files/tailscale-vnode.hotplug-dhcp \
+            luci-app-tailscale-vnode/root/usr/libexec/rpcd/tailscale-vnode \
+            tools/deploy.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: JavaScript syntax
+        run: find luci-app-tailscale-vnode/htdocs tools -name '*.js' -print0 | xargs -0 -n1 node --check
+
+      - name: JSON files
+        run: find luci-app-tailscale-vnode/root -name '*.json' -print0 | xargs -0 -n1 node -e 'JSON.parse(require("fs").readFileSync(process.argv[1]))'
+
+      - name: Translations up to date
+        run: |
+          node tools/update-po.js
+          git diff --exit-code -- luci-app-tailscale-vnode/po

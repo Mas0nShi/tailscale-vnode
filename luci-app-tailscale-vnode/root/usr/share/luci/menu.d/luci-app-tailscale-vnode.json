@@ -1,0 +1,14 @@
+{
+	"admin/services/tailscale-vnode": {
+		"title": "Tailscale Virtual Nodes",
+		"order": 60,
+		"action": {
+			"type": "view",
+			"path": "tailscale-vnode/nodes"
+		},
+		"depends": {
+			"acl": [ "luci-app-tailscale-vnode" ],
+			"uci": { "tailscale-vnode": true }
+		}
+	}
+}

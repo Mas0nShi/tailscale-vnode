@@ -1,0 +1,3 @@
+# tailscale-vnode: node namespaces resolve through the router's dnsmasq on
+# their veth address. Nothing else from a namespace may reach the router.
+iifname "tsvh*" meta l4proto { tcp, udp } th dport 53 accept comment "!tailscale-vnode: DNS from node namespaces"

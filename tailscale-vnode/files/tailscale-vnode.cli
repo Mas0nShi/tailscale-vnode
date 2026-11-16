@@ -1,0 +1,679 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+
+. /usr/lib/tailscale-vnode/vnode.sh
+. /usr/lib/tailscale-vnode/dns.sh
+. /usr/share/libubox/jshn.sh
+
+usage() {
+	cat <<-EOF
+	Usage: tailscale-vnode <command> [args]
+
+	  status [--json]          state of every node
+	  login <node>             log a node in; the auth key is read from
+	                           \$TS_AUTHKEY, stdin, or an interactive prompt
+	  logout <node>            log a node out (its Tailscale identity is kept)
+	  restart [<node>]         restart one node's tailscaled, or the whole service
+	  apply [seconds]          push the configured Tailscale names to logged-in
+	                           nodes, waiting up to <seconds> for each to start
+	  retarget [<mac> <ip>]    re-resolve nodes whose target is a MAC address,
+	                           or point the nodes targeting <mac> at <ip>
+	  dns-sync [<node>...]     create, update or remove the nodes' Cloudflare
+	                           DNS records (all nodes by default)
+	  dns-remove <node>        remove a node's Cloudflare DNS record
+	  dns-remove-all           remove the records of every node
+	  dns-zones                list the zones a token (stdin; empty line for
+	                           the stored one) can manage
+	  dns-token [--clear]      set the Cloudflare API token (read from stdin
+	                           or a prompt) after checking it, or remove it
+	  topology                 nodes, their visitors and targets, and the DERP
+	                           regions, as JSON
+	  derp-refresh             measure the DERP regions now (cached 5 minutes)
+	  tags                     ACL tags in use that the router can see
+	  connections <node> [--json]
+	                           current connections through a node and the
+	                           Tailscale device each comes from
+	  ts <node> <args...>      run tailscale against a node's daemon
+	EOF
+	exit 1
+}
+
+die() { echo "tailscale-vnode: $*" >&2; exit 1; }
+
+# Reads a secret into SECRET: from stdin, or from a prompt $1 without echo
+# when stdin is a terminal.
+read_secret() {
+	SECRET=''
+	if [ -t 0 ]; then
+		printf '%s: ' "$1" >&2
+		stty -echo 2>/dev/null
+		read -r SECRET
+		stty echo 2>/dev/null
+		echo >&2
+	else
+		read -r SECRET
+	fi
+}
+
+# Prints "<proto> <src> <dst> <dport>" for the original direction of every
+# connection tracked in node $1's namespace, or on the router itself when
+# $1 is empty. The dport is "-" for protocols without ports.
+conntrack_list() {
+	if [ -n "$1" ]; then
+		vn_ns_ensure "$1"
+		ip netns exec "tsv-$1" cat /proc/net/nf_conntrack
+	else
+		cat /proc/net/nf_conntrack
+	fi 2>/dev/null | awk '{
+		src = dst = dport = ""
+		for (i = 4; i <= NF; i++) {
+			if ($i ~ /^src=/ && src == "") src = substr($i, 5)
+			else if ($i ~ /^dst=/ && dst == "") dst = substr($i, 5)
+			else if ($i ~ /^dport=/ && dport == "") dport = substr($i, 7)
+		}
+		print $3, src, dst, (dport == "" ? "-" : dport)
+	}'
+}
+
+# Sets NODE_IDX for node $1, or fails if there is no such node section.
+find_node() {
+	local want="$1"
+	NODE_IDX=
+	_vn_find() { [ "$1" = "$want" ] && NODE_IDX=$2; }
+	vn_foreach_node _vn_find
+	[ -n "$NODE_IDX" ] || die "no node '$want' in /etc/config/$VN_CONF"
+}
+
+node_running() {
+	[ -S "$(vn_socket "$1")" ] && vn_ts "$1" status --json >/dev/null 2>&1
+}
+
+# Sets ST_STATE, ST_IP, ST_DNS, ST_ONLINE, ST_AUTHURL from the node's daemon.
+node_state() {
+	local js
+	ST_STATE=stopped ST_IP='' ST_DNS='' ST_ONLINE='' ST_AUTHURL='' ST_MAGIC=''
+	[ -S "$(vn_socket "$1")" ] || return 0
+	js=$(vn_ts "$1" status --json 2>/dev/null) || { ST_STATE=unreachable; return 0; }
+	ST_STATE=$(echo "$js" | jsonfilter -e '@.BackendState')
+	ST_IP=$(echo "$js" | jsonfilter -e '@.Self.TailscaleIPs[0]')
+	ST_DNS=$(echo "$js" | jsonfilter -e '@.Self.DNSName')
+	ST_ONLINE=$(echo "$js" | jsonfilter -e '@.Self.Online')
+	ST_AUTHURL=$(echo "$js" | jsonfilter -e '@.AuthURL')
+	# DNSName is reported even with MagicDNS off, when it does not resolve.
+	ST_MAGIC=$(echo "$js" | jsonfilter -e '@.CurrentTailnet.MagicDNSEnabled')
+}
+
+cmd_status() {
+	local as_json=0
+	[ "$1" = "--json" ] && as_json=1
+
+	_st_row() {
+		local name="$1" idx="$2" enabled target target_ip hostname port record rstate rmsg
+		config_get_bool enabled "$name" enabled 1
+		record=$(vn_dns_name "$name")
+		rstate='' rmsg=''
+		[ -s "$VN_RUN/$name.dns" ] && read -r rstate rmsg < "$VN_RUN/$name.dns"
+		[ -n "$record" ] || rstate=off
+		config_get target "$name" target
+		config_get hostname "$name" hostname "$name"
+		port=$(vn_node_port "$name" "$idx")
+		node_state "$name"
+		target_ip=''
+		[ "$ST_STATE" = stopped ] || target_ip=$(vn_node_target_ip "$name")
+		if [ "$as_json" = 1 ]; then
+			json_add_object
+			json_add_string name "$name"
+			json_add_boolean enabled "$enabled"
+			json_add_string target "$target"
+			json_add_string target_ip "$target_ip"
+			json_add_string hostname "$hostname"
+			json_add_int port "$port"
+			json_add_string state "$ST_STATE"
+			json_add_string ip "$ST_IP"
+			json_add_string dns_name "$ST_DNS"
+			json_add_boolean magic_dns "$([ "$ST_MAGIC" = true ] && echo 1 || echo 0)"
+			json_add_boolean online "$([ "$ST_ONLINE" = true ] && echo 1 || echo 0)"
+			json_add_string auth_url "$ST_AUTHURL"
+			json_add_string record "$record"
+			json_add_string record_state "${rstate:-pending}"
+			json_add_string record_message "$rmsg"
+			json_close_object
+		else
+			if vn_is_mac "$target"; then
+				target="$target=${target_ip:-?}"
+			fi
+			printf '%-14s %-8s %-34s %-6s %-12s %s\n' "$name" \
+				"$([ "$enabled" = 1 ] && echo on || echo off)" "$target" "$port" "$ST_STATE" "${ST_IP:--}"
+		fi
+	}
+
+	if [ "$as_json" = 1 ]; then
+		json_init
+		json_add_array nodes
+		vn_foreach_node _st_row
+		json_close_array
+		json_dump
+	else
+		printf '%-14s %-8s %-34s %-6s %-12s %s\n' NODE ENABLED TARGET PORT STATE TAILSCALE-IP
+		vn_foreach_node _st_row
+	fi
+}
+
+cmd_login() {
+	local name="$1" key keyfile hostname tags tag extra
+	[ -n "$name" ] || usage
+	find_node "$name"
+	node_running "$name" || die "node '$name' is not running; check 'tailscale-vnode status' and logread"
+
+	key=$TS_AUTHKEY
+	if [ -z "$key" ]; then
+		read_secret "Auth key for $name"
+		key=$SECRET
+	fi
+	[ -n "$key" ] || die "no auth key given"
+
+	config_get hostname "$name" hostname "$name"
+	config_get tags "$name" tag
+	config_get extra "$name" extra_args
+	# shellcheck disable=SC2086 # the list's words, joined with commas
+	tag=$(echo $tags | tr ' ' ',')
+
+	# The key goes through a 0600 file so it never shows up in a process list.
+	keyfile=$VN_RUN/$name.key
+	( umask 077; printf '%s' "$key" > "$keyfile" )
+	local out rc
+	# shellcheck disable=SC2086 # extra_args are separate arguments
+	out=$(vn_ts "$name" up --reset \
+		--auth-key="file:$keyfile" \
+		--hostname="$hostname" \
+		${tag:+--advertise-tags="$tag"} \
+		--accept-routes=false \
+		--accept-dns=false \
+		--netfilter-mode=off \
+		--timeout="${VN_LOGIN_TIMEOUT:-60s}" \
+		$extra 2>&1)
+	rc=$?
+	rm -f "$keyfile"
+	# Netfilter is off on purpose (the namespace has its own rules); the
+	# warning about it only hides the real error.
+	out=$(echo "$out" | grep -v '^Warning: netfilter=off')
+	if [ $rc = 0 ]; then
+		[ -n "$out" ] && echo "$out"
+		node_state "$name" && echo "$name: $ST_STATE ${ST_IP:-}"
+		# Publish the new address in the background; a caller such as
+		# rpcd must not wait for Cloudflare.
+		/usr/sbin/tailscale-vnode dns-sync "$name" </dev/null >/dev/null 2>&1 &
+	else
+		echo "$out" >&2
+	fi
+	return $rc
+}
+
+# Removes the namespace of every node the last start or reload did not bring
+# up (deleted, disabled or invalid), once procd has stopped its tailscaled.
+cmd_gc() {
+	local ns name n
+	for ns in $(ip netns list 2>/dev/null | awk '{print $1}'); do
+		case "$ns" in tsv-*) ;; *) continue ;; esac
+		name=${ns#tsv-}
+		grep -qx "$name" "$VN_RUN/active" 2>/dev/null && continue
+		n=0
+		while [ -n "$(ip netns pids "$ns" 2>/dev/null)" ] && [ $n -lt 20 ]; do
+			sleep 1
+			n=$((n + 1))
+		done
+		vn_node_down "$name" "$(cat "$VN_RUN/$name.idx" 2>/dev/null)"
+		vn_log "node $name: stopped and removed"
+	done
+}
+
+# One sync at a time, so that two runs never both create a record.
+dns_lock() {
+	mkdir -p "$VN_RUN"
+	exec 9>"$VN_RUN/dns.lock"
+	flock 9
+}
+
+cmd_dns_sync() {
+	local rc=0 node state msg on
+	dns_lock
+	vn_dns_rebind
+	# shellcheck disable=SC2046 # node names are single words
+	[ $# = 0 ] && set -- $(config_foreach echo node)
+	config_get_bool on globals dns_enabled 0
+	for node in "$@"; do
+		find_node "$node"
+		if [ "$on" = 1 ]; then
+			vn_dns_sync_node "$node" || rc=1
+		else
+			# Disabled: records are left as they are (removing them is
+			# an explicit choice, see dns-remove-all).
+			vn_dns_status "$node" off ""
+		fi
+		read -r state msg < "$VN_RUN/$node.dns"
+		echo "$node: $state${msg:+ ($msg)}"
+	done
+	return $rc
+}
+
+# Reads a Cloudflare API token from stdin (or a prompt), checks that it can
+# see at least one zone, and only then stores it (mode 600).
+cmd_dns_token() {
+	local token js zones new="$VN_CF_TOKEN.new"
+	if [ "$1" = --clear ]; then
+		rm -f "$VN_CF_TOKEN"
+		echo "Cloudflare API token removed"
+		return 0
+	fi
+	read_secret 'Cloudflare API token'
+	token=$SECRET
+	vn_cf_token_valid "$token" || die "that does not look like a Cloudflare API token"
+
+	mkdir -p "$VN_STATE_ROOT"
+	( umask 077; printf '%s' "$token" > "$new" )
+	js=$(VN_CF_TOKEN=$new vn_cf GET '/zones?per_page=50')
+	if ! vn_cf_ok "$js"; then
+		rm -f "$new"
+		die "Cloudflare rejected the token: $(vn_cf_error "$js")"
+	fi
+	zones=$(echo "$js" | jsonfilter -e '@.result[*].name' | tr '\n' ' ')
+	if [ -z "$zones" ]; then
+		rm -f "$new"
+		die "the token works but cannot see any zone; it needs Zone Read and DNS Edit on the zone"
+	fi
+	mv -f "$new" "$VN_CF_TOKEN"
+	echo "token saved; it can manage: $zones"
+}
+
+# Prints the zones a token can see, one per line. The token is read from
+# stdin; an empty line means the stored token.
+cmd_dns_zones() {
+	local token js file="$VN_CF_TOKEN" tmp=''
+	read -r token
+	if [ -n "$token" ]; then
+		vn_cf_token_valid "$token" || die "that does not look like a Cloudflare API token"
+		mkdir -p "$VN_RUN"
+		tmp=$VN_RUN/cf-token.$$
+		( umask 077; printf '%s' "$token" > "$tmp" )
+		file=$tmp
+	fi
+	js=$(VN_CF_TOKEN=$file vn_cf GET '/zones?per_page=50')
+	[ -n "$tmp" ] && rm -f "$tmp"
+	vn_cf_ok "$js" || die "$(vn_cf_error "$js")"
+	echo "$js" | jsonfilter -e '@.result[*].name'
+}
+
+cmd_dns_remove() {
+	[ -n "$1" ] || usage
+	dns_lock
+	vn_dns_remove_node "$1" || die "could not remove the DNS record of $1: $VN_DNS_ERR"
+}
+
+# Removes every record created for a node; reports the ones that failed.
+cmd_dns_remove_all() {
+	local node rc=0
+	dns_lock
+	for node in $(config_foreach echo node); do
+		[ -s "$VN_STATE_ROOT/$node/dns" ] || continue
+		if vn_dns_remove_node "$node"; then
+			echo "$node: record removed"
+		else
+			echo "$node: could not remove its record: $VN_DNS_ERR" >&2
+			rc=1
+		fi
+	done
+	return $rc
+}
+
+# Prints, one per line, every ACL tag in use that the router can see: tags
+# of devices visible to the router's own tailscale and to running nodes, and
+# tags configured on nodes. The tailnet's full tag list is only available
+# through the Tailscale API.
+cmd_tags() {
+	_tags_node() {
+		local t
+		node_running "$1" && vn_ts "$1" status --json 2>/dev/null
+		config_get t "$1" tag
+		for t in $t; do echo "\"$t\""; done
+	}
+	{
+		[ -x /usr/sbin/tailscale ] && /usr/sbin/tailscale status --json 2>/dev/null
+		vn_foreach_node _tags_node
+	} | grep -o '"tag:[A-Za-z0-9-]*"' | tr -d '"' | sort -u
+}
+
+cmd_logout() {
+	[ -n "$1" ] || usage
+	find_node "$1"
+	vn_ts "$1" logout
+}
+
+# Restarts node $1's tailscaled: procd starts it again once it exits. The
+# other nodes keep running. Without a node, restarts the whole service.
+cmd_restart() {
+	[ -n "$1" ] || exec /etc/init.d/tailscale-vnode restart
+	find_node "$1"
+	ubus call service signal "{ \"name\": \"tailscale-vnode\", \"instance\": \"$1\", \"signal\": 15 }"
+}
+
+# With <mac> <ip>: points every running node whose target is <mac> at <ip>
+# (called by the DHCP hotplug hook). Without arguments: re-resolves every
+# running node that targets a MAC address.
+cmd_retarget() {
+	local mac ip
+	mac=$(echo "$1" | tr 'A-F' 'a-f')
+	ip="$2"
+	if [ -n "$mac" ]; then
+		vn_is_mac "$mac" && vn_is_ipv4 "$ip" || die "usage: retarget [<mac> <ip>]"
+	fi
+
+	_retarget_node() {
+		local name="$1" idx="$2" enabled target want have
+		config_get_bool enabled "$name" enabled 1
+		config_get target "$name" target
+		[ "$enabled" = 1 ] && vn_is_mac "$target" && vn_ns_ensure "$name" || return 0
+		target=$(echo "$target" | tr 'A-F' 'a-f')
+
+		if [ -n "$mac" ]; then
+			[ "$target" = "$mac" ] || return 0
+			want=$ip
+		else
+			want=$(vn_resolve_target "$target")
+			[ -n "$want" ] || return 0
+		fi
+		have=$(vn_node_target_ip "$name")
+		[ "$have" = "$want" ] && return 0
+		vn_node_set_target "$name" "$idx" "$want" || return 0
+		vn_log "node $name: $target is now at $want (was ${have:-unknown})"
+		echo "$name: $target -> $want"
+	}
+	vn_foreach_node _retarget_node
+}
+
+# Pushes settings that tailscaled accepts without a new login to every
+# logged-in node. Tags are not among them: changing them needs a login.
+cmd_apply() {
+	local wait="${1:-0}"
+
+	_apply_node() {
+		local name="$1" enabled want have i=0
+		config_get_bool enabled "$name" enabled 1
+		[ "$enabled" = 1 ] || return 0
+		config_get want "$name" hostname "$name"
+
+		while ! node_running "$name"; do
+			[ $i -ge "$wait" ] && return 0
+			sleep 1
+			i=$((i + 1))
+		done
+		node_state "$name"
+		[ "$ST_STATE" = Running ] || return 0
+
+		have=$(vn_ts "$name" debug prefs 2>/dev/null | jsonfilter -e '@.Hostname')
+		[ "$have" = "$want" ] && return 0
+		if vn_ts "$name" set --hostname="$want" 2>&1; then
+			vn_log "node $name: Tailscale name '$have' -> '$want'"
+			echo "$name: hostname $want"
+		fi
+	}
+	vn_foreach_node _apply_node
+}
+
+# Sources of the connections to address $2 tracked in node $1's namespace
+# (or on the router when $1 is empty), one per line.
+connected_to() {
+	conntrack_list "$1" | awk -v self="$2" '$3 == self { print $2 }' | sort -u
+}
+
+# online, offline or none (no address) for target address $1, from the
+# neighbour table, or a single ping when that is not conclusive.
+target_state() {
+	[ -n "$1" ] || { echo none; return; }
+	case "$(ip -4 neigh show "$1" 2>/dev/null | awk '{print $NF}')" in
+		REACHABLE|DELAY|PROBE|PERMANENT) echo online; return ;;
+	esac
+	ping -c 1 -W 1 "$1" >/dev/null 2>&1 && echo online || echo offline
+}
+
+# DERP regions as seen from the router, cached in $VN_RUN/derp (refreshed
+# in the background at most every 5 minutes, as netcheck takes seconds):
+#   preferred <region id>
+#   region <id> <code> <latency ms, or -> <name...>
+derp_cache_stale() {
+	local f="$VN_RUN/derp"
+	[ -s "$f" ] || return 0
+	[ $(( $(date +%s) - $(date -r "$f" +%s) )) -ge 300 ]
+}
+
+cmd_derp_refresh() {
+	local sock='' js map id ns
+	mkdir -p "$VN_RUN"
+	exec 8>"$VN_RUN/derp.lock"
+	flock -n 8 || return 0
+	_first_sock() {
+		[ -z "$sock" ] && node_running "$1" && sock=$(vn_socket "$1")
+	}
+	vn_foreach_node _first_sock
+	[ -n "$sock" ] || return 0
+
+	js=$("$VN_TAILSCALE" --socket "$sock" netcheck --format=json 2>/dev/null) || return 0
+	map=$("$VN_TAILSCALE" --socket "$sock" debug derp-map 2>/dev/null) || return 0
+	{
+		echo "preferred $(echo "$js" | jsonfilter -e '@.PreferredDERP')"
+		for id in $(echo "$map" | jsonfilter -e '@.Regions[*].RegionID'); do
+			ns=$(echo "$js" | jsonfilter -e "@.RegionLatency['$id']" 2>/dev/null)
+			echo "region $id $(echo "$map" | jsonfilter -e "@.Regions['$id'].RegionCode") \
+$([ -n "$ns" ] && echo $(( ns / 1000000 )) || echo -) \
+$(echo "$map" | jsonfilter -e "@.Regions['$id'].RegionName")"
+		done
+	} > "$VN_RUN/derp.new" && mv -f "$VN_RUN/derp.new" "$VN_RUN/derp"
+}
+
+# Everything the connection view shows, as JSON: the DERP regions, and per
+# node its state, its target and whether that answers, and the Tailscale
+# devices connected to it with their path (direct or through which relay).
+cmd_topology() {
+	local pref
+	if derp_cache_stale; then
+		/usr/sbin/tailscale-vnode derp-refresh </dev/null >/dev/null 2>&1 &
+	fi
+
+	json_init
+	json_add_object derp
+	pref=$(awk '$1 == "preferred" { print $2 }' "$VN_RUN/derp" 2>/dev/null)
+	json_add_string preferred "$pref"
+	json_add_array regions
+	[ -s "$VN_RUN/derp" ] && while read -r kind id code ms name; do
+		[ "$kind" = region ] || continue
+		json_add_object
+		json_add_string id "$id"
+		json_add_string code "$code"
+		json_add_string name "$name"
+		[ "$ms" = - ] || json_add_int latency "$ms"
+		json_close_object
+	done < "$VN_RUN/derp"
+	json_close_array
+	json_close_object
+
+	json_add_array nodes
+	_topo_node() {
+		local name="$1" enabled target target_ip hostname icon js src origin
+		config_get_bool enabled "$name" enabled 1
+		config_get target "$name" target
+		config_get hostname "$name" hostname "$name"
+		config_get icon "$name" icon
+		node_state "$name"
+		target_ip=''
+		[ "$ST_STATE" = stopped ] || target_ip=$(vn_node_target_ip "$name")
+		vn_is_ipv4 "$target" && [ -z "$target_ip" ] && target_ip=$target
+
+		json_add_object
+		json_add_string name "$name"
+		json_add_string hostname "$hostname"
+		json_add_boolean enabled "$enabled"
+		json_add_string state "$ST_STATE"
+		json_add_string ip "$ST_IP"
+		json_add_string target "$target"
+		json_add_string target_ip "$target_ip"
+		json_add_string target_state "$([ "$enabled" = 1 ] && target_state "$target_ip" || echo none)"
+		json_add_string kind vnode
+		json_add_string icon "$icon"
+		json_add_array visitors
+		if [ -n "$ST_IP" ]; then
+			js=$(vn_ts "$name" status --json 2>/dev/null)
+			for src in $(connected_to "$name" "$ST_IP"); do
+				if [ -n "$hip" ] && [ "$src" = "$hip" ]; then
+					# Arrived through the router's own node: either the
+					# router itself, or a LAN host whose traffic the router
+					# carries into the tailnet. The router's conntrack
+					# still has who started each connection.
+					for origin in $(connected_to '' "$ST_IP"); do
+						if [ "$origin" = "$hip" ]; then
+							_topo_visitors "$js" "$src"
+						else
+							json_add_object
+							json_add_string ip "$origin"
+							json_add_boolean lan 1
+							json_close_object
+						fi
+					done
+				else
+					_topo_visitors "$js" "$src"
+				fi
+			done
+		fi
+		json_close_array
+		json_close_object
+	}
+
+	# Adds a visitor object per source address $2..., looked up in the
+	# status JSON $1 of the node they connect to.
+	_topo_visitors() {
+		local js="$1" src peer uid user
+		shift
+		for src in "$@"; do
+			peer="@.Peer[@.TailscaleIPs[0]='$src']"
+			uid=$(echo "$js" | jsonfilter -e "$peer.UserID" 2>/dev/null)
+			user=$(echo "$js" | jsonfilter -e "@.User['$uid'].LoginName" 2>/dev/null)
+			[ "$user" = tagged-devices ] && user=''
+			json_add_object
+			json_add_string ip "$src"
+			json_add_string host "$(echo "$js" | jsonfilter -e "$peer.HostName" 2>/dev/null)"
+			json_add_string os "$(echo "$js" | jsonfilter -e "$peer.OS" 2>/dev/null)"
+			json_add_string user "$user"
+			if [ -n "$(echo "$js" | jsonfilter -e "$peer.CurAddr" 2>/dev/null)" ]; then
+				json_add_string path direct
+			else
+				json_add_string path relay
+				json_add_string relay "$(echo "$js" | jsonfilter -e "$peer.Relay" 2>/dev/null)"
+			fi
+			json_close_object
+		done
+	}
+
+	# The router's own Tailscale node, if it runs one: a node of this
+	# device like the virtual ones, with the peers connected to the router
+	# itself (conntrack entries addressed to its Tailscale address).
+	local hjs hip
+	if hjs=$("$VN_TAILSCALE" status --json 2>/dev/null) &&
+	   hip=$(echo "$hjs" | jsonfilter -e '@.Self.TailscaleIPs[0]' 2>/dev/null) && [ -n "$hip" ]; then
+		json_add_object
+		json_add_string kind host
+		json_add_string name ""
+		json_add_string hostname "$(echo "$hjs" | jsonfilter -e '@.Self.HostName')"
+		json_add_boolean enabled 1
+		json_add_string state "$(echo "$hjs" | jsonfilter -e '@.BackendState')"
+		json_add_string ip "$hip"
+		json_add_array visitors
+		# Tailscale peers by their 100.x address; anything else that
+		# reaches the router at its Tailscale address is a LAN host.
+		local hsrc
+		for hsrc in $(connected_to '' "$hip"); do
+			case "$hsrc" in
+				"$hip"|127.*|*:*) ;;
+				100.*) _topo_visitors "$hjs" "$hsrc" ;;
+				*)
+					json_add_object
+					json_add_string ip "$hsrc"
+					json_add_boolean lan 1
+					json_close_object
+					;;
+			esac
+		done
+		json_close_array
+		json_close_object
+	fi
+
+	vn_foreach_node _topo_node
+	json_close_array
+	json_dump
+}
+
+cmd_connections() {
+	local name="$1" as_json=0 self js proto src dport whois user
+	[ -n "$name" ] || usage
+	[ "$2" = "--json" ] && as_json=1
+	find_node "$name"
+	vn_names "$name" "$NODE_IDX"
+	node_state "$name"
+	self=$ST_IP
+	[ -n "$self" ] || die "node '$name' has no Tailscale address yet"
+
+	[ "$as_json" = 1 ] && { json_init; json_add_array connections; } \
+		|| printf '%-5s %-16s %-6s %s\n' PROTO FROM PORT DEVICE
+
+	# Only the original direction addressed to the node itself: these are the
+	# connections that were DNATed to the target.
+	conntrack_list "$name" | awk -v self="$self" '$3 == self { print $1, $2, $4 }' |
+	sort -u | while read -r proto src dport; do
+		js=$(vn_ts "$name" whois --json "$src" 2>/dev/null)
+		whois=$(echo "$js" | jsonfilter -e '@.Node.ComputedName' 2>/dev/null)
+		[ -n "$whois" ] || whois=$(echo "$js" | jsonfilter -e '@.Node.Name' 2>/dev/null)
+		user=$(echo "$js" | jsonfilter -e '@.UserProfile.LoginName' 2>/dev/null)
+		if [ "$as_json" = 1 ]; then
+			echo "$proto $src $dport ${whois:-} ${user:-}"
+		else
+			printf '%-5s %-16s %-6s %s%s\n' "$proto" "$src" "$dport" "${whois:-?}" "${user:+ ($user)}"
+		fi
+	done | if [ "$as_json" = 1 ]; then
+		while read -r proto src dport dev user; do
+			json_add_object
+			json_add_string proto "$proto"
+			json_add_string src "$src"
+			json_add_string port "$dport"
+			json_add_string device "$dev"
+			json_add_string user "$user"
+			json_close_object
+		done
+		json_close_array
+		json_dump
+	else
+		cat
+	fi
+}
+
+config_load "$VN_CONF"
+vn_load_globals || die "invalid globals in /etc/config/$VN_CONF"
+
+cmd=$1
+[ -n "$cmd" ] && shift
+case "$cmd" in
+	status) cmd_status "$@" ;;
+	login) cmd_login "$@" ;;
+	logout) cmd_logout "$@" ;;
+	restart) cmd_restart "$@" ;;
+	apply) cmd_apply "$@" ;;
+	retarget) cmd_retarget "$@" ;;
+	tags) cmd_tags ;;
+	dns-sync) cmd_dns_sync "$@" ;;
+	dns-remove) cmd_dns_remove "$@" ;;
+	dns-remove-all) cmd_dns_remove_all ;;
+	dns-token) cmd_dns_token "$@" ;;
+	dns-zones) cmd_dns_zones ;;
+	topology) cmd_topology ;;
+	derp-refresh) cmd_derp_refresh ;;
+	gc) cmd_gc ;;
+	connections) cmd_connections "$@" ;;
+	ts) [ -n "$1" ] || usage; find_node "$1"; name=$1; shift; vn_ts "$name" "$@" ;;
+	*) usage ;;
+esac

@@ -1,0 +1,12 @@
+# The scripts run under BusyBox ash on OpenWrt.
+shell=sh
+# ash has 'local'.
+disable=SC3043
+# Sourced at their install paths (/lib/functions.sh, jshn.sh, vnode.sh, ...).
+disable=SC1091
+# Functions called back by config_foreach and vn_foreach_node.
+disable=SC2329
+# 'tr A-Z a-z' on ASCII host names and DNS names.
+disable=SC2018,SC2019
+# 'check && check || fail' is used as a guard; fail always exits.
+disable=SC2015

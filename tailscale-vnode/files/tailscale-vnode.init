@@ -1,0 +1,118 @@
+#!/bin/sh /etc/rc.common
+# SPDX-License-Identifier: GPL-2.0-only
+
+# shellcheck disable=SC2034 # read by rc.common
+USE_PROCD=1
+# shellcheck disable=SC2034
+START=95
+# shellcheck disable=SC2034
+STOP=10
+
+. /usr/lib/tailscale-vnode/vnode.sh
+
+start_node() {
+	local name="$1" idx="$2" enabled target ip port
+
+	config_get_bool enabled "$name" enabled 1
+	[ "$enabled" = 1 ] || return 0
+
+	config_get target "$name" target
+	vn_is_ipv4 "$target" || vn_is_mac "$target" || { vn_log "node $name: target '$target' is neither an IPv4 nor a MAC address, skipped"; return 0; }
+	[ "$idx" -lt "$VN_MAX_NODES" ] || { vn_log "node $name: subnet has room for $VN_MAX_NODES nodes, skipped"; return 0; }
+	port=$(vn_node_port "$name" "$idx")
+	# Sets $VN_NS for the instance command; a node left running by a reload
+	# skips vn_node_up, which would otherwise set it.
+	vn_names "$name" "$idx"
+
+	# A MAC target that has no address yet still gets its node; the DHCP
+	# hotplug hook points it at the host once the host obtains a lease.
+	ip=$(vn_resolve_target "$target")
+
+	if vn_node_alive "$name" "$idx"; then
+		# Reload of a running node: keep the namespace and its tailscaled,
+		# only follow a changed target.
+		if [ "$ip" != "$(vn_node_target_ip "$name")" ]; then
+			vn_node_set_target "$name" "$idx" "$ip" &&
+				vn_log "node $name: now forwarding to ${ip:-nothing (waiting for $target)}"
+		fi
+	else
+		[ -n "$ip" ] || vn_log "node $name: no address known for $target yet, waiting for it"
+		vn_node_up "$name" "$idx" "$ip" || { vn_log "node $name: namespace setup failed"; return 0; }
+	fi
+	echo "$name" >> "$VN_RUN/active"
+
+	procd_open_instance "$name"
+	procd_set_param command /usr/lib/tailscale-vnode/tailscaled-vnode "$VN_NS" \
+		--state "$(vn_statedir "$name")/tailscaled.state" \
+		--statedir "$(vn_statedir "$name")" \
+		--socket "$(vn_socket "$name")" \
+		--port "$port" \
+		--tun tailscale0
+	# With inbound connections the router forwards this node's port to it,
+	# and the node advertises the router's upstream address as an endpoint
+	# so that peers there connect to it directly.
+	vn_node_inbound "$name" "$idx" "$port"
+	local pretend='' wan
+	if [ "$VN_INBOUND" = 1 ] && wan=$(vn_wan_ip) && [ -n "$wan" ]; then
+		pretend="TS_DEBUG_PRETENDPOINT=$wan:$port"
+	fi
+	# TSV_GEN is new whenever the namespace was rebuilt, so procd restarts
+	# this daemon then and leaves it running on a reload otherwise.
+	# shellcheck disable=SC2086 # $pretend is one variable or none
+	procd_set_param env TS_NO_LOGS_NO_SUPPORT=true TS_DEBUG_FIREWALL_MODE=nftables \
+		TSV_GEN="$(cat "$VN_RUN/$name.gen")" $pretend
+	procd_set_param respawn
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_close_instance
+}
+
+start_service() {
+	config_load "$VN_CONF"
+	vn_load_globals || return 1
+	[ -x "$VN_TAILSCALED" ] || { vn_log "$VN_TAILSCALED not found"; return 1; }
+
+	# $VN_RUN exists only while the service runs (tmpfs, removed on stop):
+	# without it this is a fresh start and leftovers of a crash are cleared.
+	# With it this is a reload, and nodes that are already up stay up.
+	[ -d "$VN_RUN" ] || vn_teardown_all
+	mkdir -p "$VN_RUN"
+	echo "$VN_SUBNET_BASE/$VN_MAX_NODES" > "$VN_RUN/subnet"
+	nft list map inet "$VN_TABLE" inbound >/dev/null 2>&1 || vn_host_up
+
+	: > "$VN_RUN/active"
+	vn_foreach_node start_node
+
+	# procd stops the daemons of removed or disabled nodes once this returns;
+	# gc then removes their namespaces. A restarted tailscaled keeps the name
+	# from its last login, so the configured names are pushed as well.
+	# rc.common holds the service lock on fd 1000; the background jobs must
+	# not inherit it, or the next reload waits for them.
+	# shellcheck disable=SC3023 # ash allows the fd rc.common uses
+	( exec 1000>&-; /usr/sbin/tailscale-vnode gc >/dev/null 2>&1 & )
+	# DNS records follow once the names are pushed and the nodes are up.
+	# shellcheck disable=SC3023
+	( exec 1000>&-; { /usr/sbin/tailscale-vnode apply 30; /usr/sbin/tailscale-vnode dns-sync; } >/dev/null 2>&1 & )
+}
+
+# procd has already stopped every tailscaled when this runs, so the
+# namespaces are empty and can be removed.
+service_stopped() {
+	vn_teardown_all
+}
+
+# Only the nodes whose configuration changed are touched. A new link subnet
+# moves every node's addresses, which needs a full restart.
+reload_service() {
+	config_load "$VN_CONF"
+	vn_load_globals || return 1
+	if [ -d "$VN_RUN" ] && [ "$(cat "$VN_RUN/subnet" 2>/dev/null)" != "$VN_SUBNET_BASE/$VN_MAX_NODES" ]; then
+		restart
+	else
+		start
+	fi
+}
+
+service_triggers() {
+	procd_add_reload_trigger "$VN_CONF"
+}

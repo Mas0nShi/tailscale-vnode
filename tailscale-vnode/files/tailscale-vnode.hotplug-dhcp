@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# tailscale-vnode: follow hosts that are targeted by MAC address when dnsmasq
+# hands them a new lease. Only the node's NAT rules change.
+
+case "$ACTION" in
+add|old|update) ;;
+*) exit 0 ;;
+esac
+
+[ -n "$MACADDR" ] && [ -n "$IPADDR" ] || exit 0
+[ -x /usr/sbin/tailscale-vnode ] || exit 0
+
+/usr/sbin/tailscale-vnode retarget "$MACADDR" "$IPADDR" >/dev/null 2>&1
+exit 0

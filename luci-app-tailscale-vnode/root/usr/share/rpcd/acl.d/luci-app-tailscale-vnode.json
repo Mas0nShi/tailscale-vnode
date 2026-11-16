@@ -1,0 +1,19 @@
+{
+	"luci-app-tailscale-vnode": {
+		"description": "Grant access to Tailscale virtual nodes",
+		"read": {
+			"ubus": {
+				"tailscale-vnode": [ "status", "topology", "tags", "dns_info" ],
+				"luci-rpc": [ "getHostHints", "getNetworkDevices" ],
+				"network.interface": [ "dump" ]
+			},
+			"uci": [ "tailscale-vnode", "network", "vantage" ]
+		},
+		"write": {
+			"ubus": {
+				"tailscale-vnode": [ "add", "update", "delete", "login", "logout", "dns_sync", "dns_zones", "dns_configure", "dns_disable" ]
+			},
+			"uci": [ "tailscale-vnode" ]
+		}
+	}
+}

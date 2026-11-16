@@ -1,0 +1,280 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# ubus object "tailscale-vnode" for the LuCI pages, a thin layer over the
+# tailscale-vnode CLI. Auth keys and API tokens arrive in the request body
+# and reach the CLI on stdin, never as an argument.
+
+. /usr/lib/tailscale-vnode/vnode.sh
+. /usr/lib/tailscale-vnode/dns.sh
+. /usr/share/libubox/jshn.sh
+
+CLI=/usr/sbin/tailscale-vnode
+
+valid_node() { echo "$1" | grep -qE '^[A-Za-z0-9_]{1,32}$'; }
+valid_hostname() { echo "$1" | grep -qE '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$'; }
+valid_tag() { echo "$1" | grep -qE '^tag:[A-Za-z0-9-]+$'; }
+node_exists() { [ "$(uci -q get "$VN_CONF.$1")" = node ]; }
+
+reply() {
+	json_init
+	json_add_boolean ok "$1"
+	json_add_string message "$2"
+	json_dump
+}
+
+# Replies with an error and fails.
+fail() { reply 0 "$1"; return 1; }
+
+# 1 or 0 for a shell status.
+ok_of() { [ "$1" = 0 ] && echo 1 || echo 0; }
+
+# Sets option $2 of node $1 to $3, or deletes it when $3 is empty.
+set_opt() {
+	if [ -n "$3" ]; then uci set "$VN_CONF.$1.$2=$3"; else uci -q delete "$VN_CONF.$1.$2"; fi
+}
+
+# Reads the settings that add and update share into TARGET, TS_NAME, TAGS
+# (space separated), DNS_OFF, DNS_NAME and ICON; replies with an error and
+# fails on an invalid one.
+parse_node() {
+	local keys k t on
+	TARGET='' TS_NAME='' TAGS='' DNS_OFF='' DNS_NAME='' ICON=''
+	json_get_var TARGET target
+	json_get_var TS_NAME hostname
+	json_get_var on dns
+	json_get_var DNS_NAME dns_name
+	json_get_var ICON icon
+
+	vn_is_ipv4 "$TARGET" || vn_is_mac "$TARGET" || { fail "invalid target: $TARGET"; return 1; }
+	valid_hostname "$TS_NAME" || { fail "invalid Tailscale name: $TS_NAME"; return 1; }
+	if json_is_a tags array; then
+		json_select tags
+		json_get_keys keys
+		for k in $keys; do
+			json_get_var t "$k"
+			valid_tag "$t" || { json_select ..; fail "invalid tag: $t"; return 1; }
+			TAGS="$TAGS $t"
+		done
+		json_select ..
+	fi
+	[ "$on" = 0 ] && DNS_OFF=0
+	DNS_NAME=$(echo "${DNS_NAME%.}" | tr 'A-Z' 'a-z')
+	[ -z "$DNS_NAME" ] || vn_is_fqdn "$DNS_NAME" || { fail "invalid DNS name: $DNS_NAME"; return 1; }
+	case "$ICON" in ''|desktop|laptop|server|phone) ;; *) fail "invalid icon: $ICON"; return 1 ;; esac
+}
+
+# Writes what parse_node read to node $1.
+write_node() {
+	local t
+	uci set "$VN_CONF.$1.target=$TARGET"
+	uci set "$VN_CONF.$1.hostname=$TS_NAME"
+	uci -q delete "$VN_CONF.$1.tag"
+	for t in $TAGS; do uci add_list "$VN_CONF.$1.tag=$t"; done
+	set_opt "$1" dns "$DNS_OFF"
+	set_opt "$1" dns_name "$DNS_NAME"
+	set_opt "$1" icon "$ICON"
+}
+
+# A node ID derived from the Tailscale name: lower case, other characters
+# as underscores, at most 28 characters plus a suffix when taken.
+new_node_id() {
+	local base id n=2
+	base=$(echo "$1" | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9_]/_/g' | cut -c1-28)
+	[ -n "$base" ] || base=node
+	id=$base
+	while uci -q get "$VN_CONF.$id" >/dev/null; do
+		id=${base}_$n
+		n=$((n + 1))
+	done
+	echo "$id"
+}
+
+apply() { /etc/init.d/tailscale-vnode reload >/dev/null 2>&1; }
+
+case "$1" in
+list)
+	cat <<-EOF
+	{
+		"status": {},
+		"topology": {},
+		"tags": {},
+		"add": { "node": "str", "target": "str", "hostname": "str", "tags": [], "dns": true, "dns_name": "str", "icon": "str" },
+		"update": { "node": "str", "target": "str", "hostname": "str", "tags": [], "enabled": true, "port": "str", "extra_args": "str", "dns": true, "dns_name": "str", "icon": "str" },
+		"delete": { "node": "str" },
+		"login": { "node": "str", "authkey": "str" },
+		"logout": { "node": "str" },
+		"dns_info": {},
+		"dns_sync": {},
+		"dns_zones": { "token": "str" },
+		"dns_configure": { "token": "str", "suffix": "str" },
+		"dns_disable": { "remove_records": true, "forget_token": true }
+	}
+	EOF
+	;;
+call)
+	read -r input
+	json_load "$input" 2>/dev/null
+	node=''
+	json_get_var node node
+
+	case "$2" in
+	status)
+		"$CLI" status --json 2>/dev/null || echo '{ "nodes": [] }'
+		;;
+	topology)
+		"$CLI" topology 2>/dev/null || echo '{ "nodes": [] }'
+		;;
+	tags)
+		json_init
+		json_add_array tags
+		for t in $("$CLI" tags 2>/dev/null); do json_add_string "" "$t"; done
+		json_close_array
+		json_dump
+		;;
+	add)
+		# Creates the node and starts it (a reload leaves the other nodes
+		# alone). Joining the tailnet is a separate login call: both
+		# together can take longer than rpcd waits for a plugin.
+		parse_node || exit 0
+		if [ -n "$node" ]; then
+			valid_node "$node" || { fail "invalid node ID: $node"; exit 0; }
+			uci -q get "$VN_CONF.$node" >/dev/null && { fail "node ID $node is already in use"; exit 0; }
+		else
+			node=$(new_node_id "$TS_NAME")
+		fi
+		uci set "$VN_CONF.$node=node"
+		write_node "$node"
+		uci commit "$VN_CONF"
+		apply
+
+		json_init
+		json_add_boolean ok 1
+		json_add_string node "$node"
+		json_dump
+		;;
+	update)
+		# Changes a node and applies it at once; a reload only touches
+		# this node (a new port restarts its tailscaled, a new target
+		# just moves the forwarding).
+		valid_node "$node" && node_exists "$node" || { fail "no such node: $node"; exit 0; }
+		parse_node || exit 0
+		enabled=1 port='' extra_args=''
+		json_get_vars enabled port extra_args
+		[ -z "$port" ] || { [ "$port" -ge 1 ] && [ "$port" -le 65535 ]; } 2>/dev/null || { fail "invalid port: $port"; exit 0; }
+		write_node "$node"
+		uci set "$VN_CONF.$node.enabled=$([ "$enabled" = 0 ] && echo 0 || echo 1)"
+		set_opt "$node" port "$port"
+		set_opt "$node" extra_args "$extra_args"
+		uci commit "$VN_CONF"
+		apply
+		reply 1 ""
+		;;
+	delete)
+		# Logs the node out, removes it, and once its namespace is gone
+		# deletes its Tailscale identity from the router. A DNS record that
+		# cannot be removed (no token, Cloudflare down) does not block
+		# this; the reply says what was left behind.
+		valid_node "$node" && node_exists "$node" || { fail "no such node: $node"; exit 0; }
+		warn=''
+		out=$(timeout 12 "$CLI" dns-remove "$node" 2>&1) || warn=$out
+		timeout 8 "$CLI" logout "$node" >/dev/null 2>&1
+		uci delete "$VN_CONF.$node"
+		uci commit "$VN_CONF"
+		apply
+		n=0
+		while [ -e "/var/run/netns/tsv-$node" ] && [ $n -lt 15 ]; do
+			sleep 1
+			n=$((n + 1))
+		done
+		rm -rf "${VN_STATE_ROOT:?}/$node"
+		reply 1 "$warn"
+		;;
+	login)
+		valid_node "$node" || { fail "invalid node"; exit 0; }
+		key=''
+		json_get_var key authkey
+		[ -n "$key" ] || { fail "auth key is empty"; exit 0; }
+		# rpcd gives a plugin about 30 seconds; stop waiting before that.
+		out=$(printf '%s\n' "$key" | VN_LOGIN_TIMEOUT=25s "$CLI" login "$node" 2>&1)
+		reply "$(ok_of $?)" "$out"
+		;;
+	logout)
+		valid_node "$node" || { fail "invalid node"; exit 0; }
+		out=$("$CLI" logout "$node" 2>&1)
+		reply "$(ok_of $?)" "$out"
+		;;
+	dns_info)
+		json_init
+		json_add_boolean enabled "$([ "$(uci -q get "$VN_CONF.globals.dns_enabled")" = 1 ] && echo 1 || echo 0)"
+		json_add_string suffix "$(uci -q get "$VN_CONF.globals.dns_suffix")"
+		json_add_boolean rebind "$([ "$(uci -q get "$VN_CONF.globals.dns_rebind")" = 0 ] && echo 0 || echo 1)"
+		json_add_boolean token_set "$([ -s "$VN_CF_TOKEN" ] && echo 1 || echo 0)"
+		json_dump
+		;;
+	dns_sync)
+		# Runs in the background; the node table shows each result.
+		"$CLI" dns-sync </dev/null >/dev/null 2>&1 &
+		reply 1 ""
+		;;
+	dns_zones)
+		# Zones the given token (or the stored one) can manage.
+		key=''
+		json_get_var key token
+		out=$(printf '%s\n' "$key" | "$CLI" dns-zones 2>&1)
+		rc=$?
+		json_init
+		json_add_boolean ok "$(ok_of $rc)"
+		json_add_array zones
+		[ $rc = 0 ] && for z in $out; do json_add_string "" "$z"; done
+		json_close_array
+		[ $rc = 0 ] || json_add_string message "${out#tailscale-vnode: }"
+		json_dump
+		;;
+	dns_configure)
+		# Enables Cloudflare DNS (or changes its settings) in one step. A
+		# new token is checked with Cloudflare before anything is saved;
+		# without one, the stored token is kept. The first sync runs in
+		# the background and shows up in the node table.
+		key='' suffix='' msg=''
+		json_get_var key token
+		json_get_var suffix suffix
+		suffix=$(echo "$suffix" | tr 'A-Z' 'a-z' | sed 's/^\.*//; s/\.*$//')
+		vn_is_fqdn "$suffix" || { fail "invalid domain: $suffix"; exit 0; }
+		if [ -n "$key" ]; then
+			msg=$(printf '%s\n' "$key" | "$CLI" dns-token 2>&1) || { fail "$msg"; exit 0; }
+		elif [ ! -s "$VN_CF_TOKEN" ]; then
+			fail "enter a Cloudflare API token"
+			exit 0
+		fi
+		uci set "$VN_CONF.globals.dns_enabled=1"
+		uci set "$VN_CONF.globals.dns_suffix=$suffix"
+		uci commit "$VN_CONF"
+		"$CLI" dns-sync </dev/null >/dev/null 2>&1 &
+		reply 1 "$msg"
+		;;
+	dns_disable)
+		# Kept records keep their domain, so enabling again resumes them;
+		# removing the records also forgets the domain.
+		remove_records=0 forget_token=0 out='' complete=1
+		json_get_vars remove_records forget_token
+		if [ "$remove_records" = 1 ]; then
+			out=$(timeout 25 "$CLI" dns-remove-all 2>&1) || complete=0
+			uci -q delete "$VN_CONF.globals.dns_suffix"
+		fi
+		uci set "$VN_CONF.globals.dns_enabled=0"
+		uci commit "$VN_CONF"
+		"$CLI" dns-sync >/dev/null 2>&1
+		[ "$forget_token" = 1 ] && "$CLI" dns-token --clear >/dev/null 2>&1
+		json_init
+		json_add_boolean ok 1
+		json_add_boolean complete "$complete"
+		json_add_string message "$out"
+		json_dump
+		;;
+	*)
+		echo '{ "error": "unknown method" }'
+		;;
+	esac
+	;;
+esac

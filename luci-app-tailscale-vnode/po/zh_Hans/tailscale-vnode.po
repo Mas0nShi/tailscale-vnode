@@ -1,0 +1,356 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh_Hans\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "%s is not in a zone the token can manage."
+msgstr "%s 不在该令牌可管理的区域内。"
+
+msgid "API token"
+msgstr "API 令牌"
+
+msgid "Account API token with Zone DNS Edit and Zone Read."
+msgstr "账户 API 令牌，需要区域 DNS 编辑和区域读取权限。"
+
+msgid "Add node"
+msgstr "添加节点"
+
+msgid "Advanced Settings"
+msgstr "高级设置"
+
+msgid "Applied the next time the node joins."
+msgstr "下次加入时生效。"
+
+msgid "Auth key"
+msgstr "认证密钥"
+
+msgid "Base UDP port"
+msgstr "起始 UDP 端口"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Cannot be changed later."
+msgstr "创建后无法修改。"
+
+msgid "Close"
+msgstr "关闭"
+
+msgid "Cloudflare DNS"
+msgstr "Cloudflare DNS"
+
+msgid "Cloudflare rejected the token."
+msgstr "Cloudflare 拒绝了该令牌。"
+
+msgid "Connections"
+msgstr "连接"
+
+msgid "Could not create the node."
+msgstr "无法创建节点。"
+
+msgid "Could not delete the node."
+msgstr "无法删除节点。"
+
+msgid "Could not join the tailnet."
+msgstr "无法加入 Tailnet。"
+
+msgid "Could not save."
+msgstr "无法保存。"
+
+msgid "Create"
+msgstr "创建"
+
+msgid "Create and join"
+msgstr "创建并加入"
+
+msgid "Create token"
+msgstr "创建令牌"
+
+msgid "Created. Join the tailnet from the node list."
+msgstr "已创建，可在节点列表中加入 Tailnet。"
+
+msgid "Creating node"
+msgstr "正在创建节点"
+
+msgid "DNS: %s"
+msgstr "DNS：%s"
+
+msgid "DNS: name taken by another record"
+msgstr "DNS：名称已被其他记录占用"
+
+msgid "Default"
+msgstr "默认"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Delete API token"
+msgstr "删除 API 令牌"
+
+msgid "Delete node: %s"
+msgstr "删除节点：%s"
+
+msgid "Delete records"
+msgstr "删除记录"
+
+msgid "Desktop"
+msgstr "台式机"
+
+msgid "Direct"
+msgstr "直连"
+
+msgid "Disable"
+msgstr "停用"
+
+msgid "Disable Cloudflare DNS"
+msgstr "停用 Cloudflare DNS"
+
+msgid "Disabled"
+msgstr "已禁用"
+
+msgid "Domain"
+msgstr "域名"
+
+msgid "Edit"
+msgstr "编辑"
+
+msgid "Edit node: %s"
+msgstr "编辑节点：%s"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "Enabled"
+msgstr "启用"
+
+msgid "Enter the API token first"
+msgstr "请先填写 API 令牌"
+
+msgid "Enter the API token."
+msgstr "请填写 API 令牌。"
+
+msgid "Extra arguments"
+msgstr "额外参数"
+
+msgid "General Settings"
+msgstr "常规设置"
+
+msgid "Generate key"
+msgstr "生成密钥"
+
+msgid "Give LAN hosts their own Tailscale device without installing Tailscale on them."
+msgstr "无需在主机上安装 Tailscale，让局域网主机拥有自己的 Tailscale 设备。"
+
+msgid "Global Settings"
+msgstr "全局设置"
+
+msgid "Host does not respond"
+msgstr "主机无响应"
+
+msgid "Host has no address"
+msgstr "主机没有地址"
+
+msgid "Icon"
+msgstr "图标"
+
+msgid "Inbound connections"
+msgstr "入站直连"
+
+msgid "Invalid DNS name"
+msgstr "无效的 DNS 名称"
+
+msgid "Invalid Tailscale name"
+msgstr "无效的 Tailscale 名称"
+
+msgid "Invalid node ID"
+msgstr "无效的节点 ID"
+
+msgid "Invalid port"
+msgstr "无效的端口"
+
+msgid "Invalid tag: %s"
+msgstr "无效的标签：%s"
+
+msgid "Join"
+msgstr "加入"
+
+msgid "Join tailnet"
+msgstr "加入 Tailnet"
+
+msgid "Join tailnet: %s"
+msgstr "加入 Tailnet：%s"
+
+msgid "Joined as %s"
+msgstr "已加入，地址 %s"
+
+msgid "Joined; the address will appear in the list."
+msgstr "已加入，地址稍后显示在列表中。"
+
+msgid "Joining tailnet"
+msgstr "正在加入 Tailnet"
+
+msgid "Laptop"
+msgstr "笔记本"
+
+msgid "Leave tailnet"
+msgstr "退出 Tailnet"
+
+msgid "Link network"
+msgstr "内部链路网段"
+
+msgid "Link-local networks are not supported"
+msgstr "不支持链路本地网段"
+
+msgid "Loading zones"
+msgstr "正在获取区域"
+
+msgid "Local network"
+msgstr "局域网"
+
+msgid "Log %s out of the tailnet?"
+msgstr "将 %s 退出 Tailnet？"
+
+msgid "MAC or IPv4 address"
+msgstr "MAC 或 IPv4 地址"
+
+msgid "Must carry the node's tags."
+msgstr "须带有该节点的标签。"
+
+msgid "Must not overlap other networks. Changing it restarts all nodes."
+msgstr "不能与其他网段重叠。修改后所有节点会重启。"
+
+msgid "Name"
+msgstr "名称"
+
+msgid "Needs login"
+msgstr "需要登录"
+
+msgid "No visitors"
+msgstr "无访问者"
+
+msgid "Node ID"
+msgstr "节点 ID"
+
+msgid "Nodes"
+msgstr "节点"
+
+msgid "Not set"
+msgstr "未设置"
+
+msgid "Nothing was changed."
+msgstr "未做任何更改。"
+
+msgid "Opens each node's UDP port on the router, so that devices on the upstream network can connect directly instead of through a relay."
+msgstr "在路由器上开放每个节点的 UDP 端口，上游网络中的设备可以直连节点，不必经过中继。"
+
+msgid "Optional."
+msgstr "可选。"
+
+msgid "Passed to tailscale up."
+msgstr "传给 tailscale up。"
+
+msgid "Phone"
+msgstr "手机"
+
+msgid "Relay %s"
+msgstr "中继 %s"
+
+msgid "Retry"
+msgstr "重试"
+
+msgid "Running"
+msgstr "运行中"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Select a host"
+msgstr "选择主机"
+
+msgid "Select a host or enter a MAC or IPv4 address."
+msgstr "请选择主机，或填写 MAC 或 IPv4 地址。"
+
+msgid "Select a zone"
+msgstr "选择区域"
+
+msgid "Select or enter a domain."
+msgstr "请选择或填写域名。"
+
+msgid "Server"
+msgstr "服务器"
+
+msgid "Set up"
+msgstr "设置"
+
+msgid "Starting node"
+msgstr "正在启动节点"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Sync"
+msgstr "同步"
+
+msgid "Tag %s does not exist in the tailnet ACL. Create a key with an existing tag."
+msgstr "Tailnet ACL 中不存在标签 %s，请用现有标签创建密钥。"
+
+msgid "Tags"
+msgstr "标签"
+
+msgid "Tailscale Virtual Nodes"
+msgstr "Tailscale 虚拟节点"
+
+msgid "Tailscale address"
+msgstr "Tailscale 地址"
+
+msgid "Tailscale name"
+msgstr "Tailscale 名称"
+
+msgid "Target"
+msgstr "目标"
+
+msgid "The DNS record of %s could not be removed: %s"
+msgstr "%s 的 DNS 记录未能删除：%s"
+
+msgid "The key is invalid, expired or already used."
+msgstr "密钥无效、已过期或已被使用。"
+
+msgid "The key may not use this node's tags."
+msgstr "该密钥无权使用此节点的标签。"
+
+msgid "The node did not start. See the system log."
+msgstr "节点未能启动，请查看系统日志。"
+
+msgid "The node leaves the tailnet. This cannot be undone."
+msgstr "节点将退出 Tailnet，此操作无法撤销。"
+
+msgid "The token cannot manage any zone."
+msgstr "该令牌无法管理任何区域。"
+
+msgid "This section contains no values yet"
+msgstr "尚无任何配置"
+
+msgid "Timed out. Check that the router can reach Tailscale."
+msgstr "超时，请检查路由器能否连接 Tailscale。"
+
+msgid "UDP port"
+msgstr "UDP 端口"
+
+msgid "Waiting for address"
+msgstr "正在等待地址"
+
+msgid "automatic"
+msgstr "自动"
+
+msgid "no address"
+msgstr "无地址"
+
+msgid "unchanged"
+msgstr "保持不变"
+
+msgid "unreachable"
+msgstr "不可达"

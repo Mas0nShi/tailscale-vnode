@@ -1,0 +1,10 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Starts tailscaled inside a node namespace: tailscaled-vnode <netns> <args...>
+# procd names a service's syslog lines after its command, so going through
+# this script tags them "tailscaled-vnode" rather than "ip".
+
+ns=$1
+shift
+exec /sbin/ip netns exec "$ns" /usr/sbin/tailscaled "$@"
