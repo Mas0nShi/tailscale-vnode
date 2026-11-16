@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-16 -16 1166 465" width="1166" height="465" role="img" aria-labelledby="t">
+<title id="t">tailscale-vnode 连接图：左边是 tailnet 设备和局域网主机，中间是 DERP 中继，右边是路由器上的节点</title>
+<style>
+svg { --bg: rgb(248, 249, 250); --fg: rgb(20, 23, 26); --line: rgb(214, 218, 222); --accent: #8db20f; --dots: rgba(128, 128, 128, .32); }
+@media (prefers-color-scheme: dark) {
+	svg { --bg: rgb(21, 23, 26); --fg: rgb(232, 234, 237); --line: rgb(38, 42, 47); --accent: rgba(200, 240, 49, .5); --dots: rgba(128, 128, 128, .3); }
+}
+.bg { fill: var(--bg); }
+.dot { fill: var(--dots); }
+.card { fill: var(--bg); stroke: var(--line); stroke-width: 1; }
+.t { font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, &quot;Noto Sans CJK SC&quot;, Roboto, sans-serif; fill: var(--fg); }
+.m { font-family: ui-monospace, SFMono-Regular, &quot;Cascadia Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;, monospace; fill: var(--fg); }
+.ico { color: var(--fg); opacity: .75; }
+.mark { color: var(--fg); }
+.off { opacity: .55; }
+.wire { fill: none; stroke: color-mix(in srgb, var(--accent) 40%, var(--line)); stroke-width: 1.5; }
+.flow { fill: none; stroke: var(--accent); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 1.5 30; animation: flow 1.05s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -31.5; } }
+.pk { color: var(--accent); }
+.tr0 { stop-color: var(--accent); stop-opacity: 0; }
+.tr1 { stop-color: var(--accent); stop-opacity: .6; }
+@media (prefers-reduced-motion: reduce) { .flow { animation: none; } .pk { display: none; } }
+</style>
+<defs>
+<pattern id="grid" width="18" height="18" patternUnits="userSpaceOnUse"><circle class="dot" cx="1" cy="1" r="1"/></pattern>
+<linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".85" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<mask id="fadeMask"><rect x="0" y="0" width="1134" height="433" fill="url(#fade)"/></mask>
+<linearGradient id="trail" gradientUnits="userSpaceOnUse" x1="-26" y1="0" x2="0" y2="0"><stop class="tr0" offset="0"/><stop class="tr1" offset="1"/></linearGradient>
+</defs>
+<rect class="bg" x="-16" y="-16" width="1166" height="465" rx="10"/>
+<rect x="0" y="0" width="1134" height="433" fill="url(#grid)" mask="url(#fadeMask)"/>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="10.9s" begin="-6.3s" repeatCount="indefinite" rotate="auto" path="M-53 379 L37 379 L37 397 L163 397 L325 397 L469 397 L631 397 L631 379 L775 379 L829 379 L937 379 L1099 379 L1099 397 L1279 397"/></g>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="9.0s" begin="-4.8s" repeatCount="indefinite" rotate="auto" path="M1189 361 L1099 361 L1099 379 L1009 379 L1009 361 L901 361 L901 379 L775 379 L595 379 L595 361 L469 361 L361 361 L361 379 L307 379 L307 361 L163 361 L37 361 L37 343 L-53 343 L-53 325"/></g>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="7.9s" begin="-3.6s" repeatCount="indefinite" rotate="auto" path="M-53 109 L127 109 L127 127 L271 127 L397 127 L541 127 L649 127 L739 127 L829 127 L829 109 L991 109 L1045 109 L1099 109 L1099 91 L1153 91 L1225 91"/></g>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="12.5s" begin="-0.3s" repeatCount="indefinite" rotate="auto" path="M-53 73 L127 73 L307 73 L487 73 L577 73 L577 55 L631 55 L631 73 L703 73 L811 73 L883 73 L955 73 L955 91 L1009 91 L1009 73 L1189 73"/></g>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="9.5s" begin="-2.4s" repeatCount="indefinite" rotate="auto" path="M1189 91 L1009 91 L865 91 L865 73 L793 73 L739 73 L595 73 L487 73 L487 55 L307 55 L307 73 L127 73 L127 91 L-35 91 L-215 91"/></g>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="9.9s" begin="-1.9s" repeatCount="indefinite" rotate="auto" path="M1189 361 L1081 361 L1081 343 L901 343 L811 343 L667 343 L667 361 L559 361 L559 343 L379 343 L235 343 L55 343 L55 361 L-17 361 L-17 379 L-179 379"/></g>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="10.6s" begin="-7.7s" repeatCount="indefinite" rotate="auto" path="M-53 73 L91 73 L217 73 L379 73 L379 91 L433 91 L433 109 L505 109 L595 109 L595 127 L703 127 L703 145 L865 145 L1045 145 L1225 145 L1225 163"/></g>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="10.3s" begin="-5.0s" repeatCount="indefinite" rotate="auto" path="M1189 19 L1117 19 L1063 19 L1063 37 L883 37 L883 19 L811 19 L739 19 L739 37 L631 37 L469 37 L469 19 L415 19 L415 37 L235 37 L235 55 L109 55 L109 37 L-17 37 L-17 19 L-107 19"/></g>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="12.3s" begin="-10.4s" repeatCount="indefinite" rotate="auto" path="M1189 37 L1081 37 L1081 19 L1027 19 L955 19 L793 19 L685 19 L505 19 L361 19 L271 19 L163 19 L19 19 L-125 19"/></g>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="10.4s" begin="-9.1s" repeatCount="indefinite" rotate="auto" path="M1189 181 L1081 181 L901 181 L901 163 L811 163 L667 163 L487 163 L415 163 L415 181 L361 181 L199 181 L55 181 L-53 181"/></g>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="7.1s" begin="-5.8s" repeatCount="indefinite" rotate="auto" path="M-53 289 L55 289 L55 271 L181 271 L181 289 L343 289 L343 307 L523 307 L523 289 L703 289 L703 271 L811 271 L811 289 L991 289 L991 271 L1171 271 L1243 271 L1243 289"/></g>
+<g class="pk"><line x1="-26" y1="0" x2="0" y2="0" stroke="url(#trail)" stroke-width="1.25"/><rect x="-1.25" y="-1.25" width="2.5" height="2.5" fill="currentColor" opacity=".8"/><rect x="-3.5" y="-3.5" width="7" height="7" fill="currentColor" opacity=".12"/><animateMotion dur="11.0s" begin="-8.9s" repeatCount="indefinite" rotate="auto" path="M-53 307 L19 307 L19 325 L199 325 L325 325 L469 325 L595 325 L595 307 L721 307 L721 325 L811 325 L811 343 L955 343 L1027 343 L1081 343 L1189 343"/></g>
+<path class="wire" d="M310.7 72.8C365.7 72.8 365.7 59.8 420.7 59.8L669.3 59.8C724.3 59.8 724.3 39.8 779.3 39.8"/>
+<path class="flow" d="M310.7 72.8C365.7 72.8 365.7 59.8 420.7 59.8L669.3 59.8C724.3 59.8 724.3 39.8 779.3 39.8" style="animation-delay: 0ms"/>
+<path class="wire" d="M310.7 86.8C365.7 86.8 365.7 99.8 420.7 99.8L669.3 99.8C724.3 99.8 724.3 105.8 779.3 105.8"/>
+<path class="flow" d="M310.7 86.8C365.7 86.8 365.7 99.8 420.7 99.8L669.3 99.8C724.3 99.8 724.3 105.8 779.3 105.8" style="animation-delay: -370ms"/>
+<path class="wire" d="M310.7 237.2C365.7 237.2 365.7 206.3 420.7 206.3L669.3 206.3C724.3 206.3 724.3 133.8 779.3 133.8"/>
+<path class="flow" d="M310.7 237.2C365.7 237.2 365.7 206.3 420.7 206.3L669.3 206.3C724.3 206.3 724.3 133.8 779.3 133.8" style="animation-delay: -740ms"/>
+<path class="wire" d="M310.7 162.0C365.7 162.0 365.7 140.9 420.7 140.9L669.3 140.9C724.3 140.9 724.3 119.8 779.3 119.8"/>
+<path class="flow" d="M310.7 162.0C365.7 162.0 365.7 140.9 420.7 140.9L669.3 140.9C724.3 140.9 724.3 119.8 779.3 119.8" style="animation-delay: -60ms"/>
+<path class="wire" d="M310.7 326.5C365.7 326.5 365.7 216.3 420.7 216.3L669.3 216.3C724.3 216.3 724.3 216.3 779.3 216.3"/>
+<path class="flow" d="M310.7 326.5C365.7 326.5 365.7 216.3 420.7 216.3L669.3 216.3C724.3 216.3 724.3 216.3 779.3 216.3" style="animation-delay: -430ms"/>
+<path class="wire" d="M310.7 251.2C365.7 251.2 365.7 226.3 420.7 226.3L669.3 226.3C724.3 226.3 724.3 312.9 779.3 312.9"/>
+<path class="flow" d="M310.7 251.2C365.7 251.2 365.7 226.3 420.7 226.3L669.3 226.3C724.3 226.3 724.3 312.9 779.3 312.9" style="animation-delay: -800ms"/>
+<path class="wire" d="M1090.0 216.3L1094.0 216.3Q1104.0 216.3 1104.0 206.3L1104.0 129.8Q1104.0 119.8 1094.0 119.8L1090.0 119.8"/>
+<path class="flow" d="M1090.0 216.3L1094.0 216.3Q1104.0 216.3 1104.0 206.3L1104.0 129.8Q1104.0 119.8 1094.0 119.8L1090.0 119.8" style="animation-delay: -120ms"/>
+<g>
+<rect class="card" x="0.5" y="45.2" width="309.7" height="69.2" rx="8"/>
+<g>
+<svg class="ico" x="11.4" y="54.8" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="11" rx="1"></rect><path d="M2 19h20"></path></svg>
+<text class="t" x="39.2" y="67.6" font-size="13" font-weight="600">alice-macbook</text>
+<text class="m" x="39.2" y="85" font-size="11.1" font-weight="400" opacity="0.9">alice@example.com</text>
+<text class="m" x="39.2" y="101.6" font-size="11.1" font-weight="400" opacity="0.9">100.101.12.34</text>
+</g>
+</g>
+<g>
+<rect class="card" x="0.5" y="209.6" width="309.7" height="69.2" rx="8"/>
+<g>
+<svg class="ico" x="11.4" y="219.2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"></rect><path d="M11 18h2"></path></svg>
+<text class="t" x="39.2" y="232.1" font-size="13" font-weight="600">alice-iphone</text>
+<text class="m" x="39.2" y="249.5" font-size="11.1" font-weight="400" opacity="0.9">alice@example.com</text>
+<text class="m" x="39.2" y="266" font-size="11.1" font-weight="400" opacity="0.9">100.88.20.5</text>
+</g>
+</g>
+<g>
+<rect class="card" x="0.5" y="127.4" width="309.7" height="69.2" rx="8"/>
+<g>
+<svg class="ico" x="11.4" y="137" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"></rect><path d="M11 18h2"></path></svg>
+<text class="t" x="39.2" y="149.9" font-size="13" font-weight="600">iPad</text>
+<text class="m" x="39.2" y="167.2" font-size="11.1" font-weight="400" opacity="0.9">192.168.1.50</text>
+<text class="m" x="39.2" y="183.8" font-size="11.1" font-weight="400" opacity="0.9">局域网</text>
+</g>
+</g>
+<g>
+<rect class="card" x="0.5" y="291.9" width="309.7" height="69.2" rx="8"/>
+<g>
+<svg class="ico" x="11.4" y="301.5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="11" rx="1"></rect><path d="M2 19h20"></path></svg>
+<text class="t" x="39.2" y="314.3" font-size="13" font-weight="600">bob-thinkpad</text>
+<text class="m" x="39.2" y="331.7" font-size="11.1" font-weight="400" opacity="0.9">bob@example.com</text>
+<text class="m" x="39.2" y="348.3" font-size="11.1" font-weight="400" opacity="0.9">100.70.3.9</text>
+</g>
+</g>
+<g>
+<rect class="card" x="421.2" y="183" width="247.6" height="66.7" rx="8"/>
+<g>
+<svg class="ico" x="432.1" y="192.6" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M3 12h6M15 12h6M12 3v6M12 15v6"></path></svg>
+<text class="t" x="459.9" y="201.5" font-size="9.4" font-weight="400" opacity="0.65" letter-spacing=".08em">DERP</text>
+<text class="t" x="459.9" y="219.5" font-size="13" font-weight="600">Frankfurt</text>
+<text class="m" x="459.9" y="236.9" font-size="11.1" font-weight="400" opacity="0.9">14 ms</text>
+</g>
+</g>
+<g>
+<rect class="card" x="779.8" y="13.5" width="309.7" height="52.7" rx="8"/>
+<g>
+<svg class="ico" x="790.7" y="23.1" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="18" height="6" rx="1"></rect><path d="M7 16h.01M10 16h.01M8 13 6 7M16 13l2-6"></path></svg>
+<text class="t" x="818.5" y="36" font-size="13" font-weight="600">openwrt</text>
+<text class="m" x="818.5" y="53.3" font-size="11.1" font-weight="400" opacity="0.9">100.64.0.1</text>
+</g>
+</g>
+<g>
+<rect class="card" x="779.8" y="76.9" width="309.7" height="85.8" rx="8"/>
+<g>
+<svg class="ico" x="790.7" y="86.5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="7" rx="1"></rect><rect x="4" y="13" width="16" height="7" rx="1"></rect><path d="M8 7.5h.01M8 16.5h.01"></path></svg>
+<text class="t" x="818.5" y="99.4" font-size="13" font-weight="600">nas</text>
+<text class="m" x="818.5" y="116.7" font-size="11.1" font-weight="400" opacity="0.9">100.64.0.10</text>
+<text class="m" x="818.5" y="133.3" font-size="11.1" font-weight="400" opacity="0.9">nas.home.example.com</text>
+<text class="m" x="818.5" y="149.9" font-size="11.1" font-weight="400" opacity="0.9">synology-nas 192.168.1.20</text>
+</g>
+</g>
+<g>
+<rect class="card" x="779.8" y="173.4" width="309.7" height="85.8" rx="8"/>
+<g>
+<svg class="ico" x="790.7" y="183" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1"></rect><path d="M9 20h6M12 16v4"></path></svg>
+<text class="t" x="818.5" y="195.9" font-size="13" font-weight="600">desktop</text>
+<text class="m" x="818.5" y="213.3" font-size="11.1" font-weight="400" opacity="0.9">100.64.0.11</text>
+<text class="m" x="818.5" y="229.8" font-size="11.1" font-weight="400" opacity="0.9">desktop.home.example.com</text>
+<text class="m" x="818.5" y="246.4" font-size="11.1" font-weight="400" opacity="0.9">DESKTOP-ALICE 192.168.1.30</text>
+</g>
+</g>
+<g>
+<rect class="card" x="779.8" y="270" width="309.7" height="85.8" rx="8"/>
+<g>
+<svg class="ico" x="790.7" y="279.6" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3.5" width="12" height="17" rx="1.5"></rect><path d="M9.5 7.5h5M9.5 10.5h5M12 16.5h.01"></path></svg>
+<text class="t" x="818.5" y="292.4" font-size="13" font-weight="600">homeassistant</text>
+<text class="m" x="818.5" y="309.8" font-size="11.1" font-weight="400" opacity="0.9">100.64.0.12</text>
+<text class="m" x="818.5" y="326.4" font-size="11.1" font-weight="400" opacity="0.9">homeassistant.home.example.com</text>
+<text class="m" x="818.5" y="342.9" font-size="11.1" font-weight="400" opacity="0.9">homeassistant 192.168.1.40</text>
+</g>
+</g>
+<g>
+<rect class="card" x="779.8" y="366.5" width="309.7" height="52.7" rx="8"/>
+<g class="off">
+<svg class="ico" x="790.7" y="376.1" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3.5" width="12" height="17" rx="1.5"></rect><path d="M9.5 7.5h5M9.5 10.5h5M12 16.5h.01"></path></svg>
+<text class="t" x="818.5" y="389" font-size="13" font-weight="600">printer</text>
+<text class="m" x="818.5" y="406.3" font-size="11.1" font-weight="400" opacity="0.9">office-printer 192.168.1.60</text>
+</g>
+<svg class="mark" x="1058.6" y="376.1" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.6 3 17.5a2 2 0 0 0 1.7 3h14.6a2 2 0 0 0 1.7-3L13.7 4.6a2 2 0 0 0-3.4 0Z"></path><path d="M12 9.5v4.5M12 17h.01"></path></svg>
+</g>
+</svg>

@@ -9,10 +9,7 @@ port or protocol, is forwarded to the host. Each host shows up in the tailnet
 as a node of its own, with its own name and address and separate tags and
 ACLs, and the clients need no subnet routes.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/connections-en-dark.png">
-  <img src="docs/images/connections-en-light.png" alt="The connection view in LuCI: tailnet devices and LAN hosts on the left, the DERP relay in the middle, the router's nodes on the right">
-</picture>
+<img src="docs/images/connections-en.svg" width="100%" alt="The connection view in LuCI: tailnet devices and LAN hosts on the left, the DERP relay in the middle, the router's nodes on the right">
 
 [中文说明](README.zh-CN.md)
 

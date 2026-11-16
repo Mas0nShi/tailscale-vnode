@@ -6,10 +6,7 @@
 Tailscale 地址的所有流量（任意端口和协议）都会转发给这台主机。每台主机在 tailnet
 里都是一个独立的节点，有自己的名称和地址，可以单独设标签和 ACL，客户端也不需要子网路由。
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/connections-zh-dark.png">
-  <img src="docs/images/connections-zh-light.png" alt="LuCI 里的连接图：左边是 tailnet 设备和局域网主机，中间是 DERP 中继，右边是路由器上的节点">
-</picture>
+<img src="docs/images/connections-zh.svg" width="100%" alt="LuCI 里的连接图：左边是 tailnet 设备和局域网主机，中间是 DERP 中继，右边是路由器上的节点">
 
 [English](README.md)
 
