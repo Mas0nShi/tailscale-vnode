@@ -54,11 +54,26 @@ jobs:
           sudo apt-get install -y -qq build-essential file gawk gettext git libncurses-dev \
             python3 python3-setuptools rsync unzip wget zstd
 
+      - name: SDK cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/sdk.tar.zst
+          key: sdk-${{ env.SDK_SHA256 }}
+
       - name: SDK
         run: |
-          curl -fsSLO "$SDK_URL/$SDK.tar.zst"
-          echo "$SDK_SHA256  $SDK.tar.zst" | sha256sum -c
-          tar --zstd -xf "$SDK.tar.zst" -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP"
+          [ -s sdk.tar.zst ] || curl -fsSL -o sdk.tar.zst "$SDK_URL/$SDK.tar.zst"
+          echo "$SDK_SHA256  sdk.tar.zst" | sha256sum -c
+          tar --zstd -xf sdk.tar.zst
+
+      # Source tarballs of the host tools built below.
+      - name: Download cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/${{ env.SDK }}/dl
+          key: dl-${{ env.SDK_SHA256 }}-${{ github.run_id }}
+          restore-keys: dl-${{ env.SDK_SHA256 }}-
 
       - name: Feeds
         working-directory: ${{ runner.temp }}/${{ env.SDK }}
@@ -72,7 +87,16 @@ jobs:
       - name: Compile
         working-directory: ${{ runner.temp }}/${{ env.SDK }}
         run: |
-          make package/tailscale-vnode/compile package/luci-app-tailscale-vnode/compile -j"$(nproc)" V=s
+          # make package/<name>/compile would first build every runtime
+          # dependency from source (Go, the kernel for kmod-veth, openssl,
+          # ...), which these script-only packages never use: routers get
+          # them from their own feeds. So only the translation compiler
+          # (luci-base/host) is built, then each package by its own
+          # Makefile.
+          make package/luci-base/host/compile -j"$(nproc)" V=s
+          for p in tailscale-vnode luci-app-tailscale-vnode; do
+            make -C "package/feeds/tailscale_vnode/$p" TOPDIR="$PWD" compile V=s
+          done
           find bin -name '*vnode*' -ls
           mkdir -p "$RUNNER_TEMP/packages"
           find bin -name '*vnode*.apk' -exec cp {} "$RUNNER_TEMP/packages/" \;
