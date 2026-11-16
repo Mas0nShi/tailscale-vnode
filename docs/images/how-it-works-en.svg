@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1290 560" width="1290" height="560" role="img" aria-labelledby="t d">
+	<title id="t">How a tailscale-vnode node works</title>
+	<desc id="d">A tailnet peer reaches a node's Tailscale address over WireGuard. The node's tailscaled runs in its own network namespace on the router, which DNATs the traffic to the LAN host and SNATs it so that replies come back the same way.</desc>
+	<style>
+		svg { --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0; --box: #f6f8fa; --accent: #6b8e23; --accent-bg: #f3f8e6; }
+		@media (prefers-color-scheme: dark) {
+			svg { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --line: #3d444d; --box: #151b23; --accent: #a3c64a; --accent-bg: #1a2312; }
+		}
+		.bg { fill: var(--bg); }
+		.box { fill: var(--box); stroke: var(--line); stroke-width: 1.5; }
+		.node { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 1.5; }
+		.router { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 6 5; }
+		.shadow { fill: var(--box); stroke: var(--line); stroke-width: 1.2; }
+		.title { font: 600 17px -apple-system, "Segoe UI", system-ui, sans-serif; fill: var(--fg); }
+		.label { font: 500 14px -apple-system, "Segoe UI", system-ui, sans-serif; fill: var(--muted); }
+		.mono { font: 13px ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; fill: var(--fg); }
+		.note { font: 13px -apple-system, "Segoe UI", system-ui, sans-serif; fill: var(--muted); }
+		.wire { stroke: var(--accent); stroke-width: 2; fill: none; marker-end: url(#arrow); }
+		.wire2 { stroke: var(--accent); stroke-width: 2; fill: none; marker-start: url(#arrow-back); marker-end: url(#arrow); }
+		.arrow { fill: var(--accent); }
+	</style>
+	<defs>
+		<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+			<path class="arrow" d="M0 0 L10 5 L0 10 z"/>
+		</marker>
+		<marker id="arrow-back" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+			<path class="arrow" d="M10 0 L0 5 L10 10 z"/>
+		</marker>
+	</defs>
+
+	<rect class="bg" x="0" y="0" width="1290" height="560" rx="12"/>
+
+	<!-- Tailnet peer -->
+	<rect class="box" x="30" y="205" width="196" height="120" rx="10"/>
+	<text class="label" x="50" y="235">Tailnet peer</text>
+	<text class="title" x="50" y="263">alice-macbook</text>
+	<text class="mono" x="50" y="290">100.101.12.34</text>
+
+	<path class="wire" d="M226 265 H336"/>
+	<text class="label" x="234" y="252">WireGuard</text>
+
+	<!-- Router -->
+	<rect class="router" x="316" y="40" width="732" height="420" rx="14"/>
+	<text class="title" x="340" y="72">OpenWrt router</text>
+
+	<!-- Other nodes, one namespace each -->
+	<rect class="shadow" x="356" y="110" width="330" height="250" rx="10"/>
+	<rect class="shadow" x="348" y="102" width="330" height="250" rx="10"/>
+	<text class="note" x="540" y="384">one namespace per node</text>
+
+	<!-- The node's namespace -->
+	<rect class="node" x="340" y="94" width="330" height="250" rx="10"/>
+	<text class="label" x="360" y="124">netns tsv-nas</text>
+	<text class="title" x="360" y="152">tailscaled</text>
+	<text class="mono" x="360" y="178">tailscale0  100.64.0.10</text>
+	<text class="mono" x="360" y="222">DNAT 100.64.0.10 → 192.168.1.20</text>
+	<text class="note" x="360" y="242">every port and protocol</text>
+	<text class="mono" x="360" y="286">SNAT 100.101.12.34 → 198.51.100.2</text>
+	<text class="note" x="360" y="306">replies come back into this namespace</text>
+
+	<!-- veth -->
+	<path class="wire2" d="M690 220 H760"/>
+	<text class="label" x="725" y="206" text-anchor="middle">veth pair</text>
+
+	<!-- Host side -->
+	<rect class="box" x="764" y="94" width="270" height="250" rx="10"/>
+	<text class="label" x="784" y="124">Router itself</text>
+	<text class="title" x="784" y="152">fw4 + nft</text>
+	<text class="mono" x="784" y="196">SNAT 198.51.100.2</text>
+	<text class="mono" x="784" y="216">  → 192.168.1.1</text>
+	<text class="note" x="784" y="240">the LAN host replies to its gateway</text>
+	<text class="mono" x="784" y="286">table inet tailscale_vnode</text>
+	<text class="note" x="784" y="306">only the package's own objects</text>
+
+	<text class="note" x="340" y="432">Link network 198.51.100.0/24, one /30 per node. It never leaves the router.</text>
+
+	<!-- LAN host -->
+	<path class="wire" d="M1034 265 H1096"/>
+	<text class="label" x="1052" y="252">br-lan</text>
+	<rect class="box" x="1100" y="205" width="166" height="120" rx="10"/>
+	<text class="label" x="1118" y="235">LAN host</text>
+	<text class="title" x="1118" y="263">synology-nas</text>
+	<text class="mono" x="1118" y="290">192.168.1.20</text>
+
+	<text class="note" x="40" y="512">The LAN host sees the router (192.168.1.1) as the source of every connection.</text>
+	<text class="note" x="40" y="534">tailscale-vnode connections nas shows which Tailscale device is really connected.</text>
+</svg>

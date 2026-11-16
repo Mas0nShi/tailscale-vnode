@@ -9,6 +9,11 @@ port or protocol, is forwarded to the host. Each host shows up in the tailnet
 as a node of its own, with its own name and address and separate tags and
 ACLs, and the clients need no subnet routes.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/connections-en-dark.png">
+  <img src="docs/images/connections-en-light.png" alt="The connection view in LuCI: tailnet devices and LAN hosts on the left, the DERP relay in the middle, the router's nodes on the right">
+</picture>
+
 [中文说明](README.zh-CN.md)
 
 ## Features
@@ -59,6 +64,18 @@ Open **Services → Tailscale Virtual Nodes**, choose **Add node**, pick a LAN
 host and give the node a Tailscale name. With an auth key the node joins the
 tailnet right away; without one, join it later from the node list.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/nodes-en-dark.png">
+  <img src="docs/images/nodes-en-light.png" alt="The node list with each node's target, state, Tailscale address and DNS name, and the Cloudflare DNS settings">
+</picture>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/add-node-en-dark.png">
+    <img src="docs/images/add-node-en-light.png" width="600" alt="The Add node dialog: a LAN host picked from the list fills in the Tailscale name and the DNS name">
+  </picture>
+</p>
+
 Tagged auth keys need a `tagOwners` entry for the tag in the tailnet policy.
 
 ### Command line
@@ -82,18 +99,15 @@ documented in `/etc/config/tailscale-vnode`.
 
 ## How a node works
 
-```
-Tailnet peer 100.y ──WireGuard──► netns tsv-<node>: tailscaled, tailscale0 = 100.x
-    DNAT  100.x  -> <target>          (every port and protocol)
-    SNAT  100.y  -> netns veth addr   (replies must come back into this netns,
-                                       not into the host's own tailscaled)
-  ──veth tsvh<i>/tsvn<i>──► host
-    SNAT  netns addr -> router LAN addr  (the target replies to its gateway)
-  ──br-lan──► <target>
-```
+![A tailnet peer reaches the node's tailscaled over WireGuard; the node's namespace DNATs the traffic to the LAN host and SNATs it so that replies come back the same way](docs/images/how-it-works-en.svg)
 
-The target therefore sees the router as the source of every connection;
-`tailscale-vnode connections <node>` shows who is really connected.
+The node's namespace forwards everything sent to its Tailscale address to
+the target, and rewrites the source to its own veth address so that replies
+come back into the namespace instead of the router's own `tailscaled`. The
+router then sends it on to the LAN as itself, so the target replies to its
+gateway. The target therefore sees the router as the source of every
+connection; `tailscale-vnode connections <node>` shows who is really
+connected.
 
 ## What the package touches
 
