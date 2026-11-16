@@ -31,19 +31,21 @@ Tailscale 地址的所有流量（任意端口和协议）都会转发给这台�
 
 ## 安装
 
-用 OpenWrt SDK 或 buildroot 编译，把本仓库添加为 feed（LuCI 包还需要 `luci` feed）：
+下载与路由器版本和平台一致的 SDK（`downloads.openwrt.org` 或 `downloads.immortalwrt.org`），把本仓库和官方 feed 一起加进去。在 SDK 目录里执行：
 
 ```sh
+cp feeds.conf.default feeds.conf    # 保留官方 feed
 echo 'src-git tailscale_vnode https://github.com/Mas0nShi/tailscale-vnode.git' >> feeds.conf
-./scripts/feeds update tailscale_vnode
+./scripts/feeds update -a
 ./scripts/feeds install -a -p tailscale_vnode
+make defconfig
 make package/tailscale-vnode/compile package/luci-app-tailscale-vnode/compile
 ```
 
-然后在路由器上安装两个 `.apk`：
+两个包都与架构无关，编译结果在 `bin/packages/<架构>/tailscale_vnode/`。复制到路由器上安装即可，`tailscale` 等依赖会从路由器自己的软件源安装：
 
 ```sh
-apk add --allow-untrusted tailscale-vnode-*.apk luci-app-tailscale-vnode-*.apk
+apk add --allow-untrusted ./tailscale-vnode-*.apk ./luci-app-tailscale-vnode-*.apk
 ```
 
 ## 使用

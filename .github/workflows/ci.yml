@@ -36,3 +36,49 @@ jobs:
         run: |
           node tools/update-po.js
           git diff --exit-code -- luci-app-tailscale-vnode/po
+
+  # Builds both packages with an SDK the way the README says, with this
+  # checkout as the feed.
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SDK: immortalwrt-sdk-25.12.2-x86-64_gcc-14.3.0_musl.Linux-x86_64
+      SDK_URL: https://downloads.immortalwrt.org/releases/25.12.2/targets/x86/64
+      SDK_SHA256: 4d4631f134c2f27215a91aa7ef5bf9a01ea96c2450d3b8a5c38048c32462ac60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential file gawk gettext git libncurses-dev \
+            python3 python3-setuptools rsync unzip wget zstd
+
+      - name: SDK
+        run: |
+          curl -fsSLO "$SDK_URL/$SDK.tar.zst"
+          echo "$SDK_SHA256  $SDK.tar.zst" | sha256sum -c
+          tar --zstd -xf "$SDK.tar.zst" -C "$RUNNER_TEMP"
+
+      - name: Feeds
+        working-directory: ${{ runner.temp }}/${{ env.SDK }}
+        run: |
+          cp feeds.conf.default feeds.conf
+          echo "src-link tailscale_vnode $GITHUB_WORKSPACE" >> feeds.conf
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a -p tailscale_vnode
+          make defconfig
+
+      - name: Compile
+        working-directory: ${{ runner.temp }}/${{ env.SDK }}
+        run: |
+          make package/tailscale-vnode/compile package/luci-app-tailscale-vnode/compile -j"$(nproc)" V=s
+          find bin -name '*vnode*' -ls
+          mkdir -p "$RUNNER_TEMP/packages"
+          find bin -name '*vnode*.apk' -exec cp {} "$RUNNER_TEMP/packages/" \;
+          test "$(ls "$RUNNER_TEMP/packages" | wc -l)" -eq 2
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: ${{ runner.temp }}/packages/

@@ -37,20 +37,26 @@ ACLs, and the clients need no subnet routes.
 
 ## Installation
 
-Build the packages with the OpenWrt SDK or buildroot, using this repository
-as a feed (the LuCI package also needs the `luci` feed):
+Build the packages with the SDK of your router's release and target (from
+`downloads.openwrt.org` or `downloads.immortalwrt.org`), using this
+repository as a feed next to the official ones. In the SDK directory:
 
 ```sh
+cp feeds.conf.default feeds.conf    # keep the official feeds
 echo 'src-git tailscale_vnode https://github.com/Mas0nShi/tailscale-vnode.git' >> feeds.conf
-./scripts/feeds update tailscale_vnode
+./scripts/feeds update -a
 ./scripts/feeds install -a -p tailscale_vnode
+make defconfig
 make package/tailscale-vnode/compile package/luci-app-tailscale-vnode/compile
 ```
 
-Then install both `.apk` files on the router:
+Both packages are architecture-independent and end up in
+`bin/packages/<arch>/tailscale_vnode/`. Copy them to the router and
+install them; `tailscale` and the other dependencies come from the
+router's own feeds:
 
 ```sh
-apk add --allow-untrusted tailscale-vnode-*.apk luci-app-tailscale-vnode-*.apk
+apk add --allow-untrusted ./tailscale-vnode-*.apk ./luci-app-tailscale-vnode-*.apk
 ```
 
 ## Usage
