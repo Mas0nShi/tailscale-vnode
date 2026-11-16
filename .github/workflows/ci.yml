@@ -76,9 +76,71 @@ jobs:
           find bin -name '*vnode*' -ls
           mkdir -p "$RUNNER_TEMP/packages"
           find bin -name '*vnode*.apk' -exec cp {} "$RUNNER_TEMP/packages/" \;
-          test "$(ls "$RUNNER_TEMP/packages" | wc -l)" -eq 2
+          # The service, the LuCI app and its Chinese translation.
+          test "$(ls "$RUNNER_TEMP/packages" | wc -l)" -eq 3
 
       - uses: actions/upload-artifact@v4
         with:
           name: packages
           path: ${{ runner.temp }}/packages/
+
+      # The package feed: both packages and an index signed with the key
+      # whose public half is keys/tailscale-vnode.pem. Not for pull
+      # requests, which get no secrets.
+      - name: Signed feed
+        if: github.event_name == 'push'
+        working-directory: ${{ runner.temp }}/${{ env.SDK }}
+        env:
+          APK_SIGN_KEY: ${{ secrets.APK_SIGN_KEY }}
+        run: |
+          [ -n "$APK_SIGN_KEY" ] || { echo "no APK_SIGN_KEY secret"; exit 1; }
+          ( umask 077; printf '%s\n' "$APK_SIGN_KEY" > private-key.pem )
+          openssl ec -in private-key.pem -pubout -out public-key.pem 2>/dev/null
+          cmp public-key.pem "$GITHUB_WORKSPACE/keys/tailscale-vnode.pem"
+          make package/index V=s
+          rm -f private-key.pem
+          dir=$(dirname "$(find bin/packages -path '*/tailscale_vnode/*.apk' | head -1)")
+          ls -la "$dir"
+          test -s "$dir/packages.adb"
+          staging_dir/host/bin/apk adbdump "$dir/packages.adb" | grep -iE 'sign|key' | head -5 || true
+          site="$RUNNER_TEMP/site"
+          mkdir -p "$site/25.12"
+          cp "$dir"/*.apk "$dir/packages.adb" "$site/25.12/"
+          cp "$GITHUB_WORKSPACE/keys/tailscale-vnode.pem" "$site/key.pem"
+          find "$site" -type f -ls
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push'
+        with:
+          name: feed
+          path: ${{ runner.temp }}/site/
+
+  # A version tag (v0.1.0) publishes the packages as a release. The tag must
+  # match PKG_VERSION in both Makefiles.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ lint, build ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        run: |
+          v=${GITHUB_REF_NAME#v}
+          for mk in tailscale-vnode/Makefile luci-app-tailscale-vnode/Makefile; do
+            grep -qx "PKG_VERSION:=$v" "$mk" || { echo "$mk does not say PKG_VERSION:=$v"; exit 1; }
+          done
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: feed
+          path: feed
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes \
+            feed/25.12/*.apk feed/key.pem

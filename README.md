@@ -37,27 +37,33 @@ ACLs, and the clients need no subnet routes.
 
 ## Installation
 
-Build the packages with the SDK of your router's release and target (from
-`downloads.openwrt.org` or `downloads.immortalwrt.org`), using this
-repository as a feed next to the official ones. In the SDK directory:
+Add the package feed to the router once, then install from it like any
+other package:
 
 ```sh
-cp feeds.conf.default feeds.conf    # keep the official feeds
-echo 'src-git tailscale_vnode https://github.com/Mas0nShi/tailscale-vnode.git' >> feeds.conf
-./scripts/feeds update -a
-./scripts/feeds install -a -p tailscale_vnode
-make defconfig
-make package/tailscale-vnode/compile package/luci-app-tailscale-vnode/compile
+wget -O /etc/apk/keys/tailscale-vnode.pem https://mas0nshi.github.io/tailscale-vnode/key.pem
+echo 'https://mas0nshi.github.io/tailscale-vnode/25.12/packages.adb' >> /etc/apk/repositories.d/customfeeds.list
+apk update
+apk add luci-app-tailscale-vnode
+apk add luci-i18n-tailscale-vnode-zh-cn    # optional: Chinese translation
 ```
 
-Both packages are architecture-independent and end up in
-`bin/packages/<arch>/tailscale_vnode/`. Copy them to the router and
-install them; `tailscale` and the other dependencies come from the
-router's own feeds:
+`tailscale` and the other dependencies come from the router's own feeds.
+Later versions arrive with `apk upgrade`, or from **System → Software** in
+LuCI. The packages are architecture-independent, so the one feed serves
+every target.
 
-```sh
-apk add --allow-untrusted ./tailscale-vnode-*.apk ./luci-app-tailscale-vnode-*.apk
+The feed's index is signed; apk refuses it unless it matches this key:
+
 ```
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1zOBVFuYtWi8g/iWtdDoXvd/v/xI
+U8TQKxLj3dcQU1mRGmRmNBV+x8m2pfn6Y/kCKGKVBMbExaW/VJVyDEH6Rg==
+-----END PUBLIC KEY-----
+```
+
+Each release also carries the `.apk` files, for installing without the
+feed: `apk add --allow-untrusted ./tailscale-vnode-*.apk ./luci-app-tailscale-vnode-*.apk`.
 
 ## Usage
 
@@ -160,7 +166,24 @@ changes.
 
 ## Development
 
-Run from a checkout, against a router you can reach over SSH:
+To build the packages yourself, use the SDK of your router's release and
+target (from `downloads.openwrt.org` or `downloads.immortalwrt.org`) with
+this repository as a feed next to the official ones. In the SDK directory:
+
+```sh
+cp feeds.conf.default feeds.conf    # keep the official feeds
+echo 'src-git tailscale_vnode https://github.com/Mas0nShi/tailscale-vnode.git' >> feeds.conf
+./scripts/feeds update -a
+./scripts/feeds install -a -p tailscale_vnode
+make defconfig
+make package/tailscale-vnode/compile package/luci-app-tailscale-vnode/compile
+```
+
+The packages end up in `bin/packages/<arch>/tailscale_vnode/`. CI builds
+them the same way; a version tag publishes them.
+
+To try changes without packaging, run from a checkout against a router you
+can reach over SSH:
 
 ```sh
 tools/deploy.sh root@router           # copy the files over, without packaging

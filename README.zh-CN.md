@@ -31,22 +31,29 @@ Tailscale 地址的所有流量（任意端口和协议）都会转发给这台�
 
 ## 安装
 
-下载与路由器版本和平台一致的 SDK（`downloads.openwrt.org` 或 `downloads.immortalwrt.org`），把本仓库和官方 feed 一起加进去。在 SDK 目录里执行：
+在路由器上添加一次软件源，之后像其他软件包一样安装：
 
 ```sh
-cp feeds.conf.default feeds.conf    # 保留官方 feed
-echo 'src-git tailscale_vnode https://github.com/Mas0nShi/tailscale-vnode.git' >> feeds.conf
-./scripts/feeds update -a
-./scripts/feeds install -a -p tailscale_vnode
-make defconfig
-make package/tailscale-vnode/compile package/luci-app-tailscale-vnode/compile
+wget -O /etc/apk/keys/tailscale-vnode.pem https://mas0nshi.github.io/tailscale-vnode/key.pem
+echo 'https://mas0nshi.github.io/tailscale-vnode/25.12/packages.adb' >> /etc/apk/repositories.d/customfeeds.list
+apk update
+apk add luci-app-tailscale-vnode luci-i18n-tailscale-vnode-zh-cn
 ```
 
-两个包都与架构无关，编译结果在 `bin/packages/<架构>/tailscale_vnode/`。复制到路由器上安装即可，`tailscale` 等依赖会从路由器自己的软件源安装：
+`tailscale` 等依赖从路由器自己的软件源安装。以后有新版本，用 `apk upgrade` 或在 LuCI 的 **系统 → 软件包** 里升级。两个包与架构无关，所有平台都用这一个软件源。
 
-```sh
-apk add --allow-untrusted ./tailscale-vnode-*.apk ./luci-app-tailscale-vnode-*.apk
+软件源的索引有签名，和下面这把公钥对不上时 apk 会拒绝使用：
+
 ```
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1zOBVFuYtWi8g/iWtdDoXvd/v/xI
+U8TQKxLj3dcQU1mRGmRmNBV+x8m2pfn6Y/kCKGKVBMbExaW/VJVyDEH6Rg==
+-----END PUBLIC KEY-----
+```
+
+每个版本的 Release 里也有这些 `.apk`，不想添加软件源时可以下载后执行 `apk add --allow-untrusted ./tailscale-vnode-*.apk ./luci-app-tailscale-vnode-*.apk`。
+
+想自己编译的话，见 [README.md](README.md) 的 Development 一节。
 
 ## 使用
 
